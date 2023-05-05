@@ -1,5 +1,7 @@
 # Depth-averaged lava flow model
 
+https://img.shields.io/badge/doi-10.5281%2Fzenodo.7900930-blue
+
 Shallow water model for lava flow with vertical profiles of velocity and temperature and temperature-dependent viscosity. 
 
 To compile:
