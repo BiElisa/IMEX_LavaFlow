@@ -1,6 +1,6 @@
-# Depth-averaged lava flow model
+# Depth-averaged lava flow model 
 
-DOI: https://doi.org/10.5281/zenodo.7900930
+[![DOI](https://zenodo.org/badge/453471156.svg)](https://doi.org/10.5281/zenodo.7900929)
 
 Shallow water model for lava flow with vertical profiles of velocity and temperature and temperature-dependent viscosity. 
 
