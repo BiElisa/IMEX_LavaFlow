@@ -1,12 +1,49 @@
-# Depth-averaged lava flow model 
+# Depth-averaged lava flow model 🌋
 
 [![DOI](https://zenodo.org/badge/453471156.svg)](https://doi.org/10.5281/zenodo.7900929)
 
-Shallow water model for lava flow with vertical profiles of velocity and temperature and temperature-dependent viscosity. 
+IMEX_LavaFlow is a Fortran 90 numerical simulation code designed to model the propagation of lava flows on topographic surfaces. The model is based on the numerical solution of a two-dimensional system of Shallow Water Equations (SWE), integrated with source and relaxation terms to capture the effects of flow resistance and lava rheology. The model includes Additional characteristics are the implementation of vertical profiles of velocity and temperature and temperature-dependent viscosity. 
 
-To compile:
+#### Numerical method
+The code uses a Runge-Kutta Explicit-IMplicit (IMEX) scheme for time integration:
 
-> ./configure
+* Hyperbolic Part (Explicit): Solved explicitly with a Finite Volume method (semidiscrete, central scheme), ensuring stability and precision in flow transport.
+
+* Stiff Terms (Implicit): Treated implicitly, essential for managing the numerical rigidity introduced by nonlinear terms such as rheology.
+
+* Implicit Resolution: The nonlinear system is solved using the Newton-Raphson algorithm, with the Jacobian matrix computed numerically using the extremely precise Complex Step Derivative technique (implemented in complexify.f90).
+
+### Prerequisites
+| Category  | Requirement  | Details  | Installation  |
+|-----------|--------------|----------|--------------|
+| Language  | Fortran 90/95/2003  |    |  |
+| Compiler        | GNU Fortran (gfortran) | Required.     | [Fortran-Lang](https://fortran-lang.org/),  [GNU Fortran docs](https://gcc.gnu.org/fortran/)|
+| Parallelization | OpenMP  | Used for computational acceleration.  | Included with gfortran
+| Libraries       | LAPACK / BLAS  | Essential for high-performance linear algebra; used to solve the implicit system. | [LAPACK site](https://www.netlib.org/lapack/)
+| Build System    | Autotools   | The project uses `Makefile.am` and `Makefile.in` (Autoconf/Automake).  | [GNU Autotools](https://www.gnu.org/software/automake/)
+
+Install all required components on Debian/Ubuntu-based systems with:
+```bash
+$ sudo apt install gfortran
+$ sudo apt install liblapack-dev libblas-dev
+$ sudo apt install make
+```
+
+### Installation and Compiling
+Download locally the repository (if needed):
+```bash
+$ git clone https://github.com/BiElisa/IMEX_LavaFlow.git
+$ cd IMEX_LavaFlow
+```
+Configure:
+```bash
+$ ./configure
+```
+Compile:
+```bash
+$ make
+$ make install
+```
 
 To compile the code with OpenMP add the following flag in src/Makefile:
 1) with gfortran: -fopenmp
