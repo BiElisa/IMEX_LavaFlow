@@ -27,6 +27,7 @@ Install all required components on Debian/Ubuntu-based systems with:
 $ sudo apt install gfortran
 $ sudo apt install liblapack-dev libblas-dev
 $ sudo apt install make
+$ sudo apt install automake autoconf libtool
 ```
 
 ### Installation and Compiling
@@ -35,10 +36,12 @@ Download locally the repository (if needed):
 $ git clone https://github.com/BiElisa/IMEX_LavaFlow.git
 $ cd IMEX_LavaFlow
 ```
-Configure:
+Configure (you might need to make the file executable):
 ```bash
+$ chmod +x configure
 $ ./configure
 ```
+
 Compile:
 ```bash
 $ make
@@ -46,13 +49,12 @@ $ make install
 ```
 
 To compile the code with OpenMP add the following flag in src/Makefile:
-1) with gfortran: -fopenmp
-2) with intel: -qopenmp
+1) with gfortran: `-fopenmp`
+2) with intel: `-qopenmp`
 
-> make
+The executable `IMEX_LavaFlow` is copied in the `bin` folder.
 
-> make install
+Examples are located in the EXAMPLES folder.
 
-The executable is copied in the bin folder.
-
-Several examples can be found in the EXAMPLES folder.
+## Run an example
+Copy or link the executable in the 

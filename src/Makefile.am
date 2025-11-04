@@ -7,6 +7,7 @@ AUTOMAKE_OPTIONS = foreign
 
 # the program to build (the names of the final binaries)
 bin_PROGRAMS = IMEX_LavaFlow
+
 bindir=@bindir@
 
 # list of sources for the binary
