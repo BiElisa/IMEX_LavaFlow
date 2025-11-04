@@ -62,5 +62,3 @@ Execute the simulation by launching:
 ```bash
 $ ./IMEX_LavaFlow
 ```
-> *Note:*
-> If your simulation requires a 
