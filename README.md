@@ -57,4 +57,10 @@ The executable `IMEX_LavaFlow` is copied in the `bin` folder.
 Examples are located in the EXAMPLES folder.
 
 ## Run an example
-Copy or link the executable in the 
+To run an example you need to have in the same folder an input file `IMEX_LavaFlow.inp`, an asc file for the topography (for example `topography_dem.asc` contained into the folder `EXAMPLE_DEM_FOR_STUDENTS`), and a copy or link of the executable file contained into the `bin` folder.
+Execute the simulation by launching:
+```bash
+$ ./IMEX_LavaFlow
+```
+> *Note:*
+> If your simulation requires a 
