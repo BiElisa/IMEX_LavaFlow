@@ -13,7 +13,16 @@ The code uses a Runge-Kutta Explicit-IMplicit (IMEX) scheme for time integration
 
 * Implicit Resolution: The nonlinear system is solved using the Newton-Raphson algorithm, with the Jacobian matrix computed numerically using the extremely precise Complex Step Derivative technique (implemented in complexify.f90).
 
-### Prerequisites
+### Bibliographic references
+<a id="ref1"></a>
+[1] Biagioli, E., de' Michieli Vitturi, M. & Di Benedetto, F. (2021). *Modified shallow water model for viscous fluids and positivity preserving numerical approximation*. Applied Matheematical Modelling, 94(1-2), 482–505.  
+   DOI: [10.1016/j.apm.2020.12.036](https://doi.org/10.1016/j.apm.2020.12.036)
+
+<a id="ref2"></a>
+[2] Biagioli, E., de' Michieli Vitturi, M., Di Benedetto, F., & Polacci, M. (2023). *Benchmarking a new 2.5D shallow water model for lava flows*. Journal of Volcanology and Geothermal Research, 444(7), 107935.  
+   DOI: [110.1016/j.jvolgeores.2023.107935](https://doi.org/10.1016/j.jvolgeores.2023.107935)
+
+## Prerequisites
 | Category  | Requirement  | Details  | Installation  |
 |-----------|--------------|----------|--------------|
 | Language  | Fortran 90/95/2003  |    |  |
@@ -30,7 +39,7 @@ $ sudo apt install make
 $ sudo apt install automake autoconf libtool
 ```
 
-### Installation and Compiling
+## Installation and Compiling
 Download locally the repository (if needed):
 ```bash
 $ git clone https://github.com/BiElisa/IMEX_LavaFlow.git
@@ -62,3 +71,39 @@ Execute the simulation by launching:
 ```bash
 $ ./IMEX_LavaFlow
 ```
+
+## Read and modify an input file
+
+The input file `IMEX_LavaFlow.inp` defines all the physical, numerical and geometrical parameters required to execute a numerical simulation.
+
+The file is composed of blocks, Fortran NAMELISTS, each introduced by `&BLOCK_NAME` and terminated by `/`. Each block controls a specific aspect of the simulation.
+
+### RUN_PARAMETERS
+
+| Variable  |  Meaning  |
+|-----------|--------------|
+| `RUN_NAME`  | Run name, used for output files.  |
+| `RESTART`   | If `T`, resume from a saved state; if `F`, start a new run. |
+| `T_START`  | Initial simulation time (s). |
+| `T_END`  | Final simulation time (s). |
+| `DT_OUTPUT` | Time interval between saving results (s). |
+| `OUTPUT_CONS_FLAG`  | Save *conservative variables* such as `h, hU, hT` in a file `.q_2d`; these variables are used for numerical purpose, see [[1]](#ref1). |
+| `OUTPUT_ESRI_FLAG`  | Export results in ESRI ASCII format (in a file`.asc`). |
+| `OUTPUT_PHYS_FLAG`  | Save *physical variables* such as `h, U, T` (thickness, depth-averaged velocity, depth-averaged temperature) in a file `.p_2d`. |
+| `OUTPUT_RUNOUT_FLAG` | If `T`, save the maximum distances traveled by the flow. |
+| `VERBOSE_LEVEL` | On-screen message level (0 = silent). |
+
+### NEWRUN_PARAMETERS
+
+| Variable  |  Meaning  |
+|-----------|--------------|
+| `X0`, `Y0`  | UTM coordinates (m) of the southwest corner of the grid. |
+| `COMP_CELLS_X`, `COMP_CELLS_Y` | Number of cells in the X and Y direction. |
+| `CELL_SIZE` | Cell width (m). |
+| `RHEOLOGY_FLAG` | Activates rheological laws (e.g. non-Newtonian viscosity).  |
+| `ENERGY_FLAG` | Activate the energy equation (set `F` for lava flows). |
+| `LIQUID_FLAG` | `T` lava is considered a liquid |
+| `RADIAL_SOURCE_FLAG` | Activate radial sources from the surface (set `F` for lava flows). |
+| `BOTTOM_RADIAL_SOURCE_FLAG` | Activate radial sources from the bottom (set `T` for lava flows). |
+| `COLLAPSING_VOLUME_FLAG` | Activate initial volume collapse (set `F` for lava flows).|
+| `VELOCITY_PROFILE_FLAG`, `TEMPERATURE_PROFILE_FLAG` | Activate velocity and temperature vertical profiles. |
