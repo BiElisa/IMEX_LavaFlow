@@ -122,3 +122,18 @@ For each variable, the `FLAG` must be set (for example `H_BC%FLAG`). It can assu
 * `1` → Dirichlet condition (imposed value),
 * `0` → Neumann condition (zero gradient),
 * `-1` → condition not set.
+
+### TEMPERATURE_PARAMETERS
+
+| Variable  |  Meaning  |
+|-----------|-----------|
+| `EMISSIVITY` | Surface emissivity (0–1).  |
+| `ATM_HEAT_TRANSF_COEFF`  | Heat exchange coefficient with the atmosphere (W m⁻² K⁻¹).  |
+| `EXP_AREA_FRACT` | Fraction of area exposed to cooling. |
+| `C_P`  | Specific heat (J kg⁻¹ K⁻¹). |
+| `ENNE`  | Relative thickness of the thermal layer (dimensionless units). |
+| `T_ENV`, `T_GROUND` | Ambient and soil temperatures (K). |
+| `THERMAL_CONDUCTIVITY_FLUID`, `THERMAL_CONDUCTIVITY_SOIL` | Thermal conductivity of fluid and soil (W m⁻¹ K⁻¹). |
+| `EMME`  | Relative thickness of the conductive layer in the soil. |
+| `RHO_SOIL`, `C_P_SOIL`, `T_SOIL`  | Density, specific heat and deep soil temperature. |
+
