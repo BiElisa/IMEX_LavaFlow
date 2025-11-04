@@ -81,7 +81,7 @@ The file is composed of blocks, Fortran NAMELISTS, each introduced by `&BLOCK_NA
 ### RUN_PARAMETERS
 
 | Variable  |  Meaning  |
-|-----------|--------------|
+|-----------|-----------|
 | `RUN_NAME`  | Run name, used for output files.  |
 | `RESTART`   | If `T`, resume from a saved state; if `F`, start a new run. |
 | `T_START`  | Initial simulation time (s). |
@@ -96,7 +96,7 @@ The file is composed of blocks, Fortran NAMELISTS, each introduced by `&BLOCK_NA
 ### NEWRUN_PARAMETERS
 
 | Variable  |  Meaning  |
-|-----------|--------------|
+|-----------|-----------|
 | `X0`, `Y0`  | UTM coordinates (m) of the southwest corner of the grid. |
 | `COMP_CELLS_X`, `COMP_CELLS_Y` | Number of cells in the X and Y direction. |
 | `CELL_SIZE` | Cell width (m). |
@@ -107,3 +107,18 @@ The file is composed of blocks, Fortran NAMELISTS, each introduced by `&BLOCK_NA
 | `BOTTOM_RADIAL_SOURCE_FLAG` | Activate radial sources from the bottom (set `T` for lava flows). |
 | `COLLAPSING_VOLUME_FLAG` | Activate initial volume collapse (set `F` for lava flows).|
 | `VELOCITY_PROFILE_FLAG`, `TEMPERATURE_PROFILE_FLAG` | Activate velocity and temperature vertical profiles. |
+
+### BOUNDARY CONDITIONS
+
+There are 4 identical blocks for the borders West, East, South and North, `&WEST_BOUNDARY_CONDITIONS`, etc. For each direction, we define boundary conditions for
+
+| Variable  |  Meaning  |
+|-----------|-----------|
+| `H_BC%*` | Boundary condition for `h`, the thickness (m) |
+| `HU_BC%*`, `HV_BC%*` | Boundary conditions for `HU` and `HV`, the momentum along the two directions (m^2/s) |
+| `T_BC%*` | Boundary condition for `T`, the temperature (K) |
+
+For each variable, the `FLAG` must be set (for example `H_BC%FLAG`). It can assume the values:
+* `1` → Dirichlet condition (imposed value),
+* `0` → Neumann condition (zero gradient),
+* `-1` → condition not set.
