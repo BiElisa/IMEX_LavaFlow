@@ -30,4 +30,8 @@ FC              = gfortran
 MPFC            = gfortran
 LINKER          = gfortran
 
+clean-local:
+	-rm -f *.mod *.o
+
+
 
