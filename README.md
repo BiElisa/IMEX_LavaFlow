@@ -137,3 +137,14 @@ For each variable, the `FLAG` must be set (for example `H_BC%FLAG`). It can assu
 | `EMME`  | Relative thickness of the conductive layer in the soil. |
 | `RHO_SOIL`, `C_P_SOIL`, `T_SOIL`  | Density, specific heat and deep soil temperature. |
 
+### NUMERIC_PARAMETERS
+
+| Variable  |  Meaning  |
+|-----------|-----------|
+| `SOLVER_SCHEME` | Numerical scheme for the iperbolic part of the equations: `"KT"`, `"LxF"`, `"GFORCE"`, `"UP"` (recommended `KT`). |
+| `DT0`, `MAX_DT` | Initial and maximum time-step. |
+| `CFL` | Courant number (for numerical stability). For 1D simulations: <0.5; for 2D simulations: <0.25.  |
+| `LIMITER` | Select the *limiter* for the flux reconstruction (hyperbolic terms): 0 – 3.                  |
+| `THETA`, `RECONSTR_COEFF` | Coefficients for the Total Variation Diminishing (TVD)/WENO schemes.                               |
+| `N_RK` | Number of steps for the IM-EX Runge-Kutta scheme. |
+
