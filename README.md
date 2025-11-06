@@ -192,8 +192,8 @@ Below are three example cases showing how `t_coeff` varies over time for differe
 #### Case 1 – Continuous emission
 **TIME_PARAM:** `[50.0, 50.0, 0.0, 50.0]`  
 <img 
-   width="1200" 
-   height="600" 
+   width="800" 
+   height="400" 
    alt="t_coeff_case_1" 
    src="https://github.com/user-attachments/assets/cfcecf21-1bb8-4015-b94a-3ed0a4effd99" 
 />
@@ -202,8 +202,8 @@ Below are three example cases showing how `t_coeff` varies over time for differe
 #### Case 2 – Shorter active duration with ramp
 **TIME_PARAM:** `[50.0, 30.0, 10.0, 0.0]`  
 <img 
-   width="1200" 
-   height="600" 
+   width="800" 
+   height="400" 
    alt="t_coeff_case_2" 
    src="https://github.com/user-attachments/assets/1b0945e8-90c8-4932-91f2-ba24aa73b30c" 
 />
@@ -211,8 +211,8 @@ Below are three example cases showing how `t_coeff` varies over time for differe
 #### Case 3 – Phase-shifted, partial ramp
 **TIME_PARAM:** `[60.0, 40.0, 5.0, 10.0]`  
 <img 
-   width="1200" 
-   height="600" 
+   width="800" 
+   height="400" 
    alt="t_coeff_case_3" 
    src="https://github.com/user-attachments/assets/c6a43826-be3b-4ddf-878d-2cd49dbd5b19" 
 />
@@ -221,8 +221,8 @@ Below are three example cases showing how `t_coeff` varies over time for differe
 **TIME_PARAM:** `[50.0, 50.0, 50.0, 0.0]`  
 This profile shows a gradual ramp up to full strength, then resets to zero, repeating periodically.  
 <img 
-   width="1200" 
-   height="600" 
+   width="800" 
+   height="400" 
    alt="t_coeff_sawtooth" 
    src="https://github.com/user-attachments/assets/cd257b42-41bf-407a-b029-fcdc74741895" 
 />
