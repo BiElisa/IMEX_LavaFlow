@@ -189,41 +189,63 @@ A key concept linking these parameters and the simulation is the variable `t_coe
 
 Below are three example cases showing how `t_coeff` varies over time for different `TIME_PARAM` settings.
 
-### Case 1 – Continuous emission
+#### Case 1 – Continuous emission
 **TIME_PARAM:** `[50.0, 50.0, 0.0, 50.0]`  
 <img 
-   width="1600" 
-   height="800" 
+   width="1200" 
+   height="600" 
    alt="t_coeff_case_1" 
    src="https://github.com/user-attachments/assets/cfcecf21-1bb8-4015-b94a-3ed0a4effd99" 
 />
 
 
-### Case 2 – Shorter active duration with ramp
+#### Case 2 – Shorter active duration with ramp
 **TIME_PARAM:** `[50.0, 30.0, 10.0, 0.0]`  
 <img 
-   width="1600" 
-   height="800" 
+   width="1200" 
+   height="600" 
    alt="t_coeff_case_2" 
    src="https://github.com/user-attachments/assets/1b0945e8-90c8-4932-91f2-ba24aa73b30c" 
 />
 
-### Case 3 – Phase-shifted, partial ramp
+#### Case 3 – Phase-shifted, partial ramp
 **TIME_PARAM:** `[60.0, 40.0, 5.0, 10.0]`  
 <img 
-   width="1600" 
-   height="800" 
+   width="1200" 
+   height="600" 
    alt="t_coeff_case_3" 
    src="https://github.com/user-attachments/assets/c6a43826-be3b-4ddf-878d-2cd49dbd5b19" 
 />
 
-### Case 4 – Sawtooth source
+#### Case 4 – Sawtooth source
 **TIME_PARAM:** `[50.0, 50.0, 50.0, 0.0]`  
 This profile shows a gradual ramp up to full strength, then resets to zero, repeating periodically.  
 <img 
-   width="1600" 
-   height="800" 
+   width="1200" 
+   height="600" 
    alt="t_coeff_sawtooth" 
    src="https://github.com/user-attachments/assets/cd257b42-41bf-407a-b029-fcdc74741895" 
 />
 
+### GAS_TRANSPORT_PARAMETERS 
+No need to touch these parameters for lava flow simulations.
+
+| Variable  |  Meaning  |
+|-----------|-----------|
+| `SP_HEAT_A`      | Specific heat (J kg⁻¹ K⁻¹). |
+| `SP_GAS_CONST_A` | Gas specific constant (J kg⁻¹ K⁻¹). |
+| `KIN_VISC_A`     | Kinematic viscosity (m²s⁻¹). |
+| `PRES`           | Ambient pressure (Pa). |
+| `T_AMBIENT`      | Ambient temperature (K). |
+
+
+### LIQUID_TRANSPORT_PARAMETERS 
+| Variable  |  Meaning  |
+|-----------|-----------|
+| `SP_HEAT_L`  | Specific heat of the liquid (J kg⁻¹ K⁻¹). |
+| `RHO_L`      | Density (kg m⁻³).                         |
+| `KIN_VISC_L` | Kinematic viscosity (m² s⁻¹).             |
+
+### Notes
+* All numeric variables can be written in E-notation format (e.g. `1.0E-3`).
+* Logical values ​​must be `T` (true) or `F` (false).
