@@ -115,7 +115,7 @@ There are 4 identical blocks for the borders West, East, South and North, `&WEST
 | Variable  |  Meaning  |
 |-----------|-----------|
 | `H_BC%*` | Boundary condition for `h`, the thickness (m) |
-| `HU_BC%*`, `HV_BC%*` | Boundary conditions for `HU` and `HV`, the momentum along the two directions (m^2/s) |
+| `HU_BC%*`, `HV_BC%*` | Boundary conditions for `HU` and `HV`, the momentum along the two directions (m²s⁻¹) |
 | `T_BC%*` | Boundary condition for `T`, the temperature (K) |
 
 For each variable, the `FLAG` must be set (for example `H_BC%FLAG`). It can assume the values:
@@ -147,4 +147,20 @@ For each variable, the `FLAG` must be set (for example `H_BC%FLAG`). It can assu
 | `LIMITER` | Select the *limiter* for the flux reconstruction (hyperbolic terms): 0 – 3.                  |
 | `THETA`, `RECONSTR_COEFF` | Coefficients for the Total Variation Diminishing (TVD)/WENO schemes.                               |
 | `N_RK` | Number of steps for the IM-EX Runge-Kutta scheme. |
+
+### EXPL_TERMS_PARAMETERS
+
+| Variable  |  Meaning  |
+|-----------|-----------|
+| `GRAV`    | Gravitational acceleration (m s⁻²). |
+
+### RHEOLOGY_PARAMETERS
+
+| Variable  |  Meaning  |
+|-----------|-----------|
+| `RHEOLOGY_MODEL`  | Model type. 3 = Temperature-dependent viscosity (Eq. 6 from Costa & Macedonio, 2005). |
+| `VISC_PAR`  | Exponential parameter of temperature-dependent model. Corresponds to `b` (K⁻¹) in Eq. 6 from Costa & Macedonio, 2005. |
+| `NU_REF` | Reference kinematic viscosity (m²s⁻¹) - Eq. 6 from Costa & Macedonio, 2005. Could be set equal to the viscosity at the vent. |
+| `T_REF` | Reference temperature (K) - Eq. 6 from Costa & Macedonio, 2005. Could be set equal to the temperature at the vent. `T_REF` and  `NU_REF` should be chosen consistently, i.e., `NU_REF` should correspond to the viscosity at `T_REF`. |
+| `TAU0` | Yield stress for Bingham fluids (Pa). Set equal to 0 to have Netwonian fluid.|
 
