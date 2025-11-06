@@ -164,3 +164,44 @@ For each variable, the `FLAG` must be set (for example `H_BC%FLAG`). It can assu
 | `T_REF` | Reference temperature (K) - Eq. 6 from Costa & Macedonio, 2005. Could be set equal to the temperature at the vent. `T_REF` and  `NU_REF` should be chosen consistently, i.e., `NU_REF` should correspond to the viscosity at `T_REF`. |
 | `TAU0` | Yield stress for Bingham fluids (Pa). Set equal to 0 to have Netwonian fluid.|
 
+### RADIAL_SOURCE_PARAMETERS
+
+| Variable  |  Meaning  |
+|-----------|-----------|
+| `X_SOURCE`, `Y_SOURCE` | Source Coordinate (m). |
+| `R_SOURCE` | Radius of the source (m). |
+| `VEL_SOURCE` | Injection velocity from the source (ms⁻¹). `VEL_SOURCE` is  the ratio between the effusion rate (which is a volume flow rate) (m³s⁻¹) and the source area (m²), that is `π R_SOURCE²`|
+| `T_SOURCE` | Temperature of the emitted material (K). |
+| `TIME_PARAM` | Source time parameters (see below for more details). |
+
+The input parameter `TIME_PARAM` is a 4-element array defining the temporal behavior of the source. The four entries are:
+| Index | Name | Description    |
+| ----- | ---- | -------------- |
+| TIME_PARAM(1) | Period (`T_period`) | Total period after which the source repeats. |
+| TIME_PARAM(2) | Duration (`T_active`) | Duration within the period during which the source is active. |
+| TIME_PARAM(3) | Ramp (`T_ramp`) | Time to ramp up from 0 to full strength and ramp down from full strength to 0. |
+| TIME_PARAM(4) | Phase shift (`T_shift`) | Time offset applied to shift the source activation within the period. |
+
+
+
+A key concept linking these parameters and the simulation is the variable `t_coeff` used in the code, which serves as a scaling factor for time-based adjustments of the flow emission.
+
+
+Below are three example cases showing how `t_coeff` varies over time for different `TIME_PARAM` settings.
+
+### Case 1 – Continuous emission
+**TIME_PARAM:** `[50.0, 50.0, 0.0, 50.0]`  
+![Case 1 t_coeff](t_coeff_case_1.png)
+
+### Case 2 – Shorter active duration with ramp
+**TIME_PARAM:** `[50.0, 30.0, 10.0, 0.0]`  
+![Case 2 t_coeff](t_coeff_case_2.png)
+
+### Case 3 – Phase-shifted, partial ramp
+**TIME_PARAM:** `[60.0, 40.0, 5.0, 10.0]`  
+![Case 3 t_coeff](t_coeff_case_3.png)
+
+### Case 4 – Sawtooth source
+**TIME_PARAM:** `[50.0, 50.0, 50.0, 0.0]`  
+This profile shows a gradual ramp up to full strength, then resets to zero, repeating periodically.  
+![Sawtooth t_coeff](t_coeff_sawtooth.png)
