@@ -174,20 +174,17 @@ For each variable, the `FLAG` must be set (for example `H_BC%FLAG`). It can assu
 | `T_SOURCE` | Temperature of the emitted material (K). |
 | `TIME_PARAM` | Source time parameters (see below for more details). |
 
-The input parameter `TIME_PARAM` is a 4-element array defining the temporal behavior of the source. The four entries are:
+The input parameter `TIME_PARAM` is a 4-element array defining the temporal behaviour of the source. The four entries are:
 | Index | Name | Description    |
 | ----- | ---- | -------------- |
-| TIME_PARAM(1) | Period (`T_period`) | Total period after which the source repeats. |
-| TIME_PARAM(2) | Duration (`T_active`) | Duration within the period during which the source is active. |
-| TIME_PARAM(3) | Ramp (`T_ramp`) | Time to ramp up from 0 to full strength and ramp down from full strength to 0. |
-| TIME_PARAM(4) | Phase shift (`T_shift`) | Time offset applied to shift the source activation within the period. |
-
-
+| `TIME_PARAM(1)` | Total Period | Total time length of the period. After this time, the source pattern repeats (*t_period*). Condition: `TIME_PARAM(1)` ≥ `TIME_PARAM(i)`, `i=2,3,4`. |
+| `TIME_PARAM(2)` | Activity time | Duration (within the period length) during which the source is active (*t_active*). |
+| `TIME_PARAM(3)` | Ramp up time | Duration of the ramp at the beginning of the active period (*t_ramp*). Condition: `TIME_PARAM(2)` ≥ `TIME_PARAM(3)`. This defines how long the source takes to ramp up from 0 to full strength. The ramp down duration is equal to *t_ramp* only if there is enough remaining active time (*t_active - t_ramp ≥ t_ramp*). Otherwise, the ramp down occupies the remaining portion of the active period. If `TIME_PARAM(3)` = 0, the source jumps instantaneously to full strength and drops to 0 without ramps.|
+| `TIME_PARAM(4)` | Phase shift | Time offset applied to shift the source activation within the period (*t_shift*). |
 
 A key concept linking these parameters and the simulation is the variable `t_coeff` used in the code, which serves as a scaling factor for time-based adjustments of the flow emission.
 
-
-Below are three example cases showing how `t_coeff` varies over time for different `TIME_PARAM` settings.
+Below are several example cases showing how `t_coeff` varies over time for different `TIME_PARAM` settings.
 
 #### Case 1 – Continuous emission
 **TIME_PARAM:** `[50.0, 50.0, 0.0, 50.0]`  
