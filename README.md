@@ -194,18 +194,17 @@ Below are three example cases showing how `t_coeff` varies over time for differe
 <img 
    width="800" 
    height="400" 
-   alt="t_coeff_case_1" 
-   src="https://github.com/user-attachments/assets/cfcecf21-1bb8-4015-b94a-3ed0a4effd99" 
+   alt="t_coeff_Case_1" 
+   src="https://github.com/user-attachments/assets/2cbe5d67-d1fa-47dc-a322-7946f93fc6e0" 
 />
-
 
 #### Case 2 – Shorter active duration with ramp
 **TIME_PARAM:** `[50.0, 30.0, 10.0, 0.0]`  
 <img 
    width="800" 
    height="400" 
-   alt="t_coeff_case_2" 
-   src="https://github.com/user-attachments/assets/1b0945e8-90c8-4932-91f2-ba24aa73b30c" 
+   alt="t_coeff_Case_2" 
+   src="https://github.com/user-attachments/assets/daa4fa83-cf04-4e7f-a459-c757d9c35dec" 
 />
 
 #### Case 3 – Phase-shifted, partial ramp
@@ -213,19 +212,39 @@ Below are three example cases showing how `t_coeff` varies over time for differe
 <img 
    width="800" 
    height="400" 
-   alt="t_coeff_case_3" 
-   src="https://github.com/user-attachments/assets/c6a43826-be3b-4ddf-878d-2cd49dbd5b19" 
+   alt="t_coeff_Case_3" 
+   src="https://github.com/user-attachments/assets/be669d84-1c49-4722-9dde-1b95982e891e" 
 />
 
 #### Case 4 – Sawtooth source
 **TIME_PARAM:** `[50.0, 50.0, 50.0, 0.0]`  
-This profile shows a gradual ramp up to full strength, then resets to zero, repeating periodically.  
+This profile exhibits a gradual ramp-up to full strength, followed by a reset to zero, repeating periodically.  
 <img 
    width="800" 
    height="400" 
-   alt="t_coeff_sawtooth" 
-   src="https://github.com/user-attachments/assets/cd257b42-41bf-407a-b029-fcdc74741895" 
+   alt="t_coeff_Case_4" 
+   src="https://github.com/user-attachments/assets/3c0dcf4e-772c-45a3-887a-88e87cec20aa" 
 />
+
+#### Case 5 – Symmetric Sawtooth source
+**TIME_PARAM:** `[50.0, 50.0, 25.0, 0.0]`  
+<img 
+   width="800" 
+   height="400" 
+   alt="t_coeff_Case_5" 
+   src="https://github.com/user-attachments/assets/9b673666-697d-4bc9-beec-c0968e4313b1" 
+/>
+
+#### Case 6 – Square waves
+**TIME_PARAM:** `[50.0, 30.0, 0.0, 10.0]`  
+<img 
+   width="800" 
+   height="400" 
+   alt="t_coeff_Case_6" 
+   src="https://github.com/user-attachments/assets/debab8f9-43d0-4e88-862d-7059968c9241" 
+/>
+
+
 
 ### GAS_TRANSPORT_PARAMETERS 
 No need to touch these parameters for lava flow simulations.
