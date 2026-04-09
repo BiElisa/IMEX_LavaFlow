@@ -84,6 +84,8 @@ $ python p2d_to_netCDF4.py Example_40m.bak
 ```
 A new nc-file is generated, for example `Example_40m.nc`, which can be opened by ParaView with the NetCDF Reader.
 
+For more info about how to plot the results with ParaView, read the file `README_ParaView.txt` inside UTILS. 
+
 ## Read and modify an input file
 
 The input file `IMEX_LavaFlow.inp` defines all the physical, numerical and geometrical parameters required to execute a numerical simulation.
