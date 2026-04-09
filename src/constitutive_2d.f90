@@ -3,6 +3,8 @@
 !********************************************************************************
 MODULE constitutive_2d
 
+  USE, intrinsic :: ieee_arithmetic
+
   USE parameters_2d, ONLY : wp, sp ,tolh
   USE parameters_2d, ONLY : n_eqns , n_vars , n_solid
   USE parameters_2d, ONLY : rheology_flag , rheology_model , energy_flag ,      &
@@ -1013,6 +1015,8 @@ CONTAINS
   !******************************************************************************
 
   SUBROUTINE qp_to_qp2(qpj,Bj,qp2j)
+    
+    USE parameters_2d, ONLY : eps_sing
 
     IMPLICIT none
 
@@ -1022,7 +1026,7 @@ CONTAINS
 
     qp2j(1) = qpj(1) + Bj
 
-    IF ( qpj(1) .LE. 0.0_wp ) THEN
+    IF ( qpj(1) .LE. eps_sing ) THEN
 
        qp2j(2) = 0.0_wp
        qp2j(3) = 0.0_wp
@@ -1358,6 +1362,13 @@ CONTAINS
     USE parameters_2d, ONLY : vel_source , T_source ,            &
          time_param , bottom_radial_source_flag
 
+    ! EB : add
+   
+    USE parameters_2d, ONLY : n_fissures, linear_vel_fissures ,                 &
+        volume_flow_rate_fissures, T_fissures , time_param_fissures ,           &
+        bottom_fissural_source_flag
+
+    ! EB : end add
     
     IMPLICIT NONE
 
@@ -1402,8 +1413,16 @@ CONTAINS
 
     REAL(wp) :: r_tilde_grav
     REAL(wp) :: centr_force_term
+
+    INTEGER :: i
     
     expl_term(1:n_eqns) = 0.0_wp
+
+    ! EB : aggiunto questo controllo, va poi eliminato
+    IF (cell_fract_jk < 0.0_wp .OR. cell_fract_jk > 1.0_wp) THEN
+      WRITE(*,*) 'ERROR cell_fract_jk=', cell_fract_jk
+      STOP
+    END IF
 
     IF ( ( qpj(1) .LE. 0.0_wp ) .AND. ( cell_fract_jk .EQ. 0.0_wp ) ) RETURN
 
@@ -1432,7 +1451,7 @@ CONTAINS
     
     ! units of dqc(3)/dt [kg m-1 s-2]
     expl_term(3) = - grav_coeff * r_rho_m * r_tilde_grav * r_h * Bprimej_y      &
-         + grav_coeff * r_red_grav * r_rho_m * 0.5_wp * r_h**2 * d_grav_coeff_dx
+         + grav_coeff * r_red_grav * r_rho_m * 0.5_wp * r_h**2 * d_grav_coeff_dy
 
     IF ( energy_flag ) THEN
 
@@ -1443,80 +1462,36 @@ CONTAINS
        expl_term(4) = 0.0_wp
 
     END IF
-    
-    ! ----------- ADDITIONAL EXPLICIT TERMS FOR BOTTOM RADIAL SOURCE ------------ 
 
-    IF ( .NOT.bottom_radial_source_flag ) THEN
 
-       RETURN
+    ! Mixture properties 
 
-    END IF
-
-    t_rem = MOD( time + time_param(4) , time_param(1) )
-
-    IF ( time_param(3) .EQ. 0.0_wp ) THEN
-
-       IF ( t_rem .LE. time_param(2) ) THEN
-
-          t_coeff = 1.0_wp
-
-       ELSE
-
-          t_coeff = 0.0_wp
-
-       END IF
-          
-    ELSE
-
-       IF ( t_rem .LE. time_param(3) ) THEN
-
-          t_coeff = ( t_rem / time_param(3) ) 
-
-       ELSEIF ( t_rem .LE. time_param(2) - time_param(3) ) THEN
-
-          t_coeff = 1.0_wp
-          
-       ELSEIF ( t_rem .LE. time_param(2) ) THEN
-          
-          t_coeff = 1.0_wp - ( t_rem - time_param(2) + time_param(3) ) /        &
-               time_param(3)
-          
-       ELSE
-          
-          t_coeff = 0.0_wp
-          
-       END IF
-
-    END IF
-
-    h_dot = cell_fract_jk * vel_source
-        
     IF ( gas_flag ) THEN
 
-       ! carrier phase is gas
-       r_rho_c = pres / ( sp_gas_const_a * t_source )
-       sp_heat_c = sp_heat_a
+      ! carrier phase is gas
+      r_rho_c = pres / ( sp_gas_const_a * t_source )
+      sp_heat_c = sp_heat_a
 
     ELSE
-
-       ! carrier phase is liquid
-       r_rho_c = rho_l
-       sp_heat_c = sp_heat_l
+  
+      ! carrier phase is liquid
+      r_rho_c = rho_l
+      sp_heat_c = sp_heat_l
 
     END IF
 
-       ! mixture of carrier phase ( gas or liquid ) and solid
+    ! mixture of carrier phase ( gas or liquid ) and solid
 
-       ! check and corrections on dispersed phases
-       IF ( alphas_tot .GT. 1.0_wp ) THEN
+    ! check and corrections on dispersed phases
+    IF ( alphas_tot .GT. 1.0_wp ) THEN
 
-          r_alphas(1:n_solid) = r_alphas(1:n_solid) / alphas_tot
+      r_alphas(1:n_solid) = r_alphas(1:n_solid) / alphas_tot
 
-       ELSEIF ( alphas_tot .LT. 0.0_wp ) THEN
+    ELSEIF ( alphas_tot .LT. 0.0_wp ) THEN
 
-          r_alphas(1:n_solid) = 0.0_wp
+      r_alphas(1:n_solid) = 0.0_wp
 
-       END IF
+    END IF
 
     ! carrier (gas or liquid) volume fraction
     r_alphac = 1.0_wp - alphas_tot 
@@ -1534,19 +1509,124 @@ CONTAINS
     r_sp_heat_mix =  DOT_PRODUCT( r_xs , sp_heat_s ) + r_xc * sp_heat_c
 
     
-    expl_term(1) = expl_term(1) + t_coeff * h_dot * r_rho_m
-    expl_term(2) = expl_term(2) + 0.0_wp
-    expl_term(3) = expl_term(3) + 0.0_wp
+    ! ----------- ADDITIONAL EXPLICIT TERMS FOR BOTTOM SOURCE ------------ 
 
-    IF ( energy_flag ) THEN
+    IF ( (.NOT.bottom_radial_source_flag) .AND. (.NOT.bottom_fissural_source_flag)) RETURN ! EB : modificato
 
-       expl_term(4) = expl_term(4) + t_coeff * h_dot * r_rho_m * r_sp_heat_mix  &
-            * t_source
+      IF (bottom_radial_source_flag) THEN
 
-    ELSE ! EB : non ho capito questo 'ELSE'
+         t_rem = MOD( time + time_param(4) , time_param(1) )
 
-       expl_term(4) = expl_term(4) + t_coeff * h_dot * r_rho_m * r_sp_heat_mix  &
-            * t_source
+      IF ( time_param(3) .EQ. 0.0_wp ) THEN
+      
+         t_coeff = MERGE(1.0_wp,0.0_wp, t_rem <= time_param(2))
+         
+      ELSE
+
+         IF ( t_rem <= time_param(3) ) THEN
+
+            t_coeff = t_rem / time_param(3)
+
+         ELSEIF ( t_rem <= time_param(2) - time_param(3) ) THEN
+
+            t_coeff = 1.0_wp
+
+         ELSEIF ( t_rem <= time_param(2) ) THEN
+
+            t_coeff = 1.0_wp - ( t_rem - time_param(2) + time_param(3) ) / time_param(3)
+
+         ELSE
+
+            t_coeff = 0.0_wp
+
+         END IF
+
+      END IF
+
+      h_dot = cell_fract_jk * vel_source
+
+      expl_term(1) = expl_term(1) + t_coeff * h_dot * r_rho_m
+      !expl_term(2) = expl_term(2) + 0.0_wp
+      !expl_term(3) = expl_term(3) + 0.0_wp
+ 
+      IF ( energy_flag ) THEN
+ 
+        expl_term(4) = expl_term(4) + t_coeff * h_dot * r_rho_m * r_sp_heat_mix  &
+             * t_source
+ 
+      ELSE ! EB : non ho capito questo 'ELSE'
+ 
+        expl_term(4) = expl_term(4) + t_coeff * h_dot * r_rho_m * r_sp_heat_mix  &
+             * t_source
+
+      END IF
+
+    END IF
+
+    IF (bottom_fissural_source_flag) THEN 
+
+      DO i = 1, n_fissures
+
+        ! ---- tempo per fissura i
+  
+        t_rem = MOD( time + time_param_fissures(4*i) , time_param_fissures(4*i-3) )
+  
+        IF ( time_param_fissures(4*i-1) .EQ. 0.0_wp ) THEN
+  
+          t_coeff = MERGE(1.0_wp,0.0_wp, t_rem <= time_param_fissures(4*i-2))
+  
+        ELSE
+  
+          IF ( t_rem <= time_param_fissures(4*i-1) ) THEN
+  
+              t_coeff = t_rem / time_param_fissures(4*i-1)
+  
+          ELSEIF ( t_rem <= time_param_fissures(4*i-2) - time_param_fissures(4*i-1) ) THEN
+  
+              t_coeff = 1.0_wp
+  
+          ELSEIF ( t_rem <= time_param_fissures(4*i-2) ) THEN
+  
+              t_coeff = 1.0_wp - ( t_rem - time_param_fissures(4*i-2) + time_param_fissures(4*i-1) ) / time_param_fissures(4*i-1)
+  
+          ELSE
+  
+              t_coeff = 0.0_wp
+  
+          END IF
+  
+        END IF
+  
+        ! ---- portata per fissura i
+        IF (.NOT. ANY( ieee_is_nan(linear_vel_fissures) )) THEN
+  
+          h_dot = linear_vel_fissures(i)
+  
+        ELSE
+  
+          h_dot = volume_flow_rate_fissures(i)
+  
+        END IF
+  
+        h_dot = h_dot * cell_fract_jk
+
+        expl_term(1) = expl_term(1) + t_coeff * h_dot * r_rho_m
+        !expl_term(2) = expl_term(2) + 0.0_wp
+        !expl_term(3) = expl_term(3) + 0.0_wp
+   
+        IF ( energy_flag ) THEN
+   
+          expl_term(4) = expl_term(4) + t_coeff * h_dot * r_rho_m * r_sp_heat_mix  &
+               * T_fissures(i)
+   
+        ELSE ! EB : non ho capito questo 'ELSE'
+   
+          expl_term(4) = expl_term(4) + t_coeff * h_dot * r_rho_m * r_sp_heat_mix  &
+               * T_fissures(i)
+  
+        END IF
+    
+      END DO
 
     END IF
   
@@ -1964,6 +2044,32 @@ CONTAINS
     RETURN
 
   END SUBROUTINE eval_nh_semi_impl_terms
+
+    ! EB : add
+
+  !------------------------------------------------------------------------------
+  !> \brief Input variable check
+  !> @author
+  !> Mattia de' Michieli Vitturi
+  !
+  !> This function checks is the input variable "var" value has been set or if it
+  !> has the initialization value (NaN).
+  !> \date 18/05/2019, 02/02/2026
+  !> \param[in]   var      variable to check
+  !> \return      a logical which is True if variable has been defined
+  !------------------------------------------------------------------------------
+
+  LOGICAL FUNCTION isSet(var)
+
+    IMPLICIT NONE
+
+    REAL*8 :: var
+
+    isSet = .NOT.ieee_is_nan(var)
+
+    RETURN
+
+  END FUNCTION isSet
 
 END MODULE constitutive_2d
 

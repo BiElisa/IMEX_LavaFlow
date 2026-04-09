@@ -27,6 +27,8 @@ MODULE solver_2d
   USE geometry_2d, ONLY : d_grav_coeff_dx , d_grav_coeff_dy
   USE geometry_2d, ONLY : source_cell
   USE geometry_2d, ONLY : cell_source_fractions
+  USE geometry_2d, ONLY : cell_source_fractions_stag_x ! EB : add
+  USE geometry_2d, ONLY : cell_source_fractions_stag_y !
 
   USE parameters_2d, ONLY : wp , sp
 
@@ -934,7 +936,9 @@ CONTAINS
     USE constitutive_2d, ONLY : T_ambient
 
     USE geometry_2d, ONLY : B_nodata
-    USE geometry_2d, ONLY : cell_source_fractions ! EB : added
+    USE geometry_2d, ONLY : cell_source_fractions        ! 
+    USE geometry_2d, ONLY : cell_source_fractions_stag_x ! EB : added
+    USE geometry_2d, ONLY : cell_source_fractions_stag_y ! 
 
 !!$    USE parameters_2d, ONLY : time_param , bottom_radial_source_flag
     
@@ -2282,12 +2286,12 @@ CONTAINS
 
           CALL eval_fluxes( q_interfaceL(1:n_vars,j,k) ,                        &
                qp_interfaceL(1:n_vars+2,j,k) , grav_coeff_stag_x(j,k) , 1 ,     &
-               fluxL, cell_source_fractions(j,k)) 
+               fluxL, cell_source_fractions_stag_x(j,k)) 
                ! EB : added 'cell_source_fractions'
 
           CALL eval_fluxes( q_interfaceR(1:n_vars,j,k) ,                        &
                qp_interfaceR(1:n_vars+2,j,k) , grav_coeff_stag_x(j,k) , 1 ,     &
-               fluxR, cell_source_fractions(j,k)) 
+               fluxR, cell_source_fractions_stag_x(j,k)) 
                ! EB : added 'cell_source_fractions'
 
           IF ( ( qp_interfaceL(n_vars+1,j,k) .GT. 0.0_wp ) .AND.                &
@@ -2332,12 +2336,12 @@ CONTAINS
 
           CALL eval_fluxes( q_interfaceB(1:n_vars,j,k) ,                        &
                qp_interfaceB(1:n_vars+2,j,k) , grav_coeff_stag_y(j,k) , 2 ,     &
-               fluxB, cell_source_fractions(j,k)) 
+               fluxB, cell_source_fractions_stag_y(j,k)) 
                ! EB : added 'cell_source_fractions'
 
           CALL eval_fluxes( q_interfaceT(1:n_vars,j,k) ,                        &
                qp_interfaceT(1:n_vars+2,j,k) , grav_coeff_stag_y(j,k) ,2 ,      &
-               fluxT, cell_source_fractions(j,k)) 
+               fluxT, cell_source_fractions_stag_y(j,k))
                ! EB : added 'cell_source_fractions'
 
           IF ( ( q_interfaceB(3,j,k) .GT. 0.0_wp ) .AND.                        &
@@ -2422,14 +2426,22 @@ CONTAINS
           j = j_stag_x(l)
           k = k_stag_x(l)
 
+          !if (cell_source_fractions(j,k) > 0.1_wp) then
+          !  write(*,*) 'DEBUG: Cella Vent J=', j, ' Stag_X=', cell_source_fractions_stag_x(j,k)
+          !  read(*,*) 
+          !Else
+          !  write(*,*) 'bah!' 
+          !endif
+          
+
           CALL eval_fluxes( q_interfaceL(1:n_vars,j,k) ,                        &
                qp_interfaceL(1:n_vars+2,j,k) , grav_coeff_stag_x(j,k) , 1 ,     &
-               fluxL,source_jk = cell_source_fractions(j,k)) 
+               fluxL,source_jk = cell_source_fractions_stag_x(j,k))  ! <-- questa e` la riga 2431
                ! EB : added 'cell_source_fractions'
           
           CALL eval_fluxes( q_interfaceR(1:n_vars,j,k) ,                        &
                qp_interfaceR(1:n_vars+2,j,k) , grav_coeff_stag_x(j,k) , 1 ,     &
-               fluxR,source_jk = cell_source_fractions(j,k)) 
+               fluxR,source_jk = cell_source_fractions_stag_x(j,k)) 
                ! EB : added 'cell_source_fractions'
 
           CALL average_KT( a_interface_xNeg(:,j,k), a_interface_xPos(:,j,k) ,   &
@@ -2491,12 +2503,12 @@ CONTAINS
 
           CALL eval_fluxes( q_interfaceB(1:n_vars,j,k) ,                        &
                qp_interfaceB(1:n_vars+2,j,k) , grav_coeff_stag_y(j,k) , 2 ,     &
-               fluxB,source_jk = cell_source_fractions(j,k)) 
+               fluxB,source_jk = cell_source_fractions_stag_y(j,k))
                ! EB : added 'cell_source_fractions'    
 
           CALL eval_fluxes( q_interfaceT(1:n_vars,j,k) ,                        &
                qp_interfaceT(1:n_vars+2,j,k) , grav_coeff_stag_y(j,k) , 2 ,     &
-               fluxT,source_jk = cell_source_fractions(j,k)) 
+               fluxT,source_jk = cell_source_fractions_stag_y(j,k)) 
                ! EB : added 'cell_source_fractions'
 
           CALL average_KT( a_interface_yNeg(:,j,k) ,                            &

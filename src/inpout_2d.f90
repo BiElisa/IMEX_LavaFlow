@@ -12,10 +12,12 @@
 
 MODULE inpout_2d
 
+  USE, intrinsic :: ieee_arithmetic
+
   USE parameters_2d, ONLY : wp
 
   ! -- Variables for the namelist RUN_PARAMETERS
-  USE parameters_2d, ONLY : t_start , t_end , t_output , dt_output 
+   USE parameters_2d, ONLY : t_start , t_end , t_output , dt_output 
 
   USE solver_2d, ONLY : verbose_level
 
@@ -27,8 +29,9 @@ MODULE inpout_2d
   USE parameters_2d, ONLY : rheology_flag , energy_flag , alpha_flag ,          &
        radial_source_flag , collapsing_volume_flag ,         &
        liquid_flag , gas_flag , bottom_radial_source_flag
-  ! EB : add 2 flags
-  USE parameters_2d, ONLY : velocity_profile_flag , temperature_profile_flag
+  ! EB : add 3 flags
+  USE parameters_2d, ONLY : velocity_profile_flag , temperature_profile_flag ,  &
+       bottom_fissural_source_flag , n_fissures
 
 
   USE parameters_2d, ONLY : slope_correction_flag , curvature_term_flag 
@@ -52,8 +55,14 @@ MODULE inpout_2d
   ! -- Variables for the namelist RADIAL_SOURCE_PARAMETERS
   USE parameters_2d, ONLY : x_source , y_source , r_source , vel_source ,       &
        T_source , time_param
-       
-!  USE init_2d, ONLY : init_source ! EB : add
+
+   ! EB : add
+  ! -- Variables for the namelist FISSURAL_SOURCE_PARAMETERS
+  USE parameters_2d, ONLY : linear_vel_fissures_flag, volume_flow_rate_fissures_flag,&
+       x_fissures_end_points, y_fissures_end_points ,      &
+       width_fissures , T_fissures , time_param_fissures ,                      &
+       linear_vel_fissures, volume_flow_rate_fissures
+        
 
   ! -- Variables for the namelist COLLAPSING_VOLUME_PARAMETERS
   USE parameters_2d, ONLY : x_collapse , y_collapse , r_collapse , T_collapse , &
@@ -94,6 +103,8 @@ MODULE inpout_2d
   
 
   IMPLICIT NONE
+
+  REAL*8 :: notSet ! EB : add
 
   CHARACTER(LEN=40) :: run_name           !< Name of the run
   CHARACTER(LEN=40) :: bak_name           !< Backup file for the parameters
@@ -217,7 +228,10 @@ MODULE inpout_2d
        energy_flag , liquid_flag , radial_source_flag , collapsing_volume_flag ,&
        gas_flag ,                        &
        bottom_radial_source_flag , slope_correction_flag , curvature_term_flag ,& 
-       velocity_profile_flag , temperature_profile_flag ! EB : add
+       velocity_profile_flag , temperature_profile_flag ,                       & ! EB : add
+       bottom_fissural_source_flag , n_fissures , linear_vel_fissures_flag ,    & !
+       volume_flow_rate_fissures_flag                                             !
+
 
   NAMELIST / initial_conditions /  released_volume , x_release , y_release ,    &
        velocity_mod_release , velocity_ang_release , T_init , T_ambient
@@ -229,6 +243,10 @@ MODULE inpout_2d
  
   NAMELIST / radial_source_parameters / x_source , y_source , r_source ,        &
        vel_source , T_source , time_param
+
+  NAMELIST / fissural_source_parameters / x_fissures_end_points,                &   ! EB : added
+       y_fissures_end_points , width_fissures , T_fissures , time_param_fissures, & !
+       linear_vel_fissures , volume_flow_rate_fissures                              !
   
   NAMELIST / collapsing_volume_parameters / x_collapse , y_collapse ,           &
        r_collapse , T_collapse , h_collapse , alphas_collapse
@@ -278,6 +296,8 @@ CONTAINS
     LOGICAL :: lexist
     INTEGER :: ios
 
+    notSet = ieee_value(0.D0, ieee_quiet_nan) ! EB : add
+
     n_vars = 3
 
     !-- Inizialization of the Variables for the namelist RUN_PARAMETERS
@@ -310,6 +330,10 @@ CONTAINS
     radial_source_flag = .FALSE.
     collapsing_volume_flag = .FALSE.
     bottom_radial_source_flag = .FALSE.
+    bottom_fissural_source_flag = .FALSE. ! EB : added
+    n_fissures = 1      ! EB : added
+    linear_vel_fissures_flag = .FALSE. !
+    volume_flow_rate_fissures_flag = .FALSE. !
     liquid_flag = .TRUE. ! EB : modified
     gas_flag = .FALSE.   ! EB : modified
     alpha_flag = .FALSE.
@@ -581,7 +605,7 @@ CONTAINS
     LOGICAL :: tend1 
     CHARACTER(LEN=80) :: card
 
-    INTEGER :: i_solid , j , k
+    INTEGER :: i_solid , j , k , i
 
     INTEGER :: dot_idx
     
@@ -594,8 +618,11 @@ CONTAINS
     INTEGER :: ios
     
     REAL(wp) :: c , effe ! EB : add
+    REAL(wp) :: x1, x2, y1, y2, w, x_min, x_max, y_min, y_max, t_p_f(4)
     
-    REAL(wp) :: expA , expB , Tc
+    !REAL(wp) :: expA , expB , Tc ! EB : commento perche` non sono usati
+
+    LOGICAL :: has_vel = .FALSE., has_rate = .FALSE.
 
     OPEN(input_unit,FILE=input_file,STATUS='old')
 
@@ -656,6 +683,36 @@ CONTAINS
     
        beta_vel = 1.0
        
+    END IF
+
+    IF ( bottom_fissural_source_flag ) THEN 
+
+      IF (n_fissures .LE. 0) THEN  
+
+        WRITE(*,*) 'ERROR: problem with namelist NEWRUN_PARAMETERS' 
+        WRITE(*,*) 'PLEASE CHECK VALUE OF N_FISSURES',n_fissures 
+        WRITE(*,*) 'AS bottom_fissural_source_flag = ', bottom_fissural_source_flag
+        WRITE(*,*) 'Then the value of N_FISSURES should be an integer >= 1' 
+        STOP 
+
+      END IF 
+
+      ALLOCATE(x_fissures_end_points(2*n_fissures)) 
+      ALLOCATE(y_fissures_end_points(2*n_fissures)) 
+      ALLOCATE(width_fissures(n_fissures)) 
+      ALLOCATE(linear_vel_fissures(n_fissures))
+      ALLOCATE(volume_flow_rate_fissures(n_fissures))
+      ALLOCATE(T_fissures(n_fissures))
+      ALLOCATE (time_param_fissures(4*n_fissures))
+
+      x_fissures_end_points = ieee_value(0.0_wp, ieee_quiet_nan)
+      y_fissures_end_points = ieee_value(0.0_wp, ieee_quiet_nan)
+      width_fissures = ieee_value(0.0_wp, ieee_quiet_nan)
+      linear_vel_fissures = ieee_value(0.0_wp, ieee_quiet_nan)
+      volume_flow_rate_fissures = ieee_value(0.0_wp, ieee_quiet_nan)
+      T_fissures = ieee_value(0.0_wp, ieee_quiet_nan)
+      time_param_fissures = ieee_value(0.0_wp, ieee_quiet_nan)
+
     END IF
     ! EB : end add    
     
@@ -1107,7 +1164,7 @@ CONTAINS
           
        END IF
 
-       ! set the approriate boundary conditions
+       ! set the appropriate boundary conditions
 
        bcW(1) = h_bcW
        bcW(2) = hu_bcW 
@@ -1517,7 +1574,229 @@ CONTAINS
            
     END IF
 
+    ! EB : add
 
+    ! ------- READ fissural_source_parameters NAMELIST ----------------------------
+
+    IF ( bottom_fissural_source_flag ) THEN
+
+      READ(input_unit,fissural_source_parameters,IOSTAT=ios)
+
+      IF ( ios .NE. 0 ) THEN
+            
+         WRITE(*,*) 'IOSTAT=',ios
+         WRITE(*,*) 'ERROR: problem with namelist FISSURAL_SOURCE_PARAMETERS'
+         WRITE(*,*)
+         WRITE(*,*) 'Please check the input file'
+         STOP
+         
+      ELSE
+         
+        REWIND(input_unit)
+
+        IF ( ANY( ieee_is_nan(x_fissures_end_points) ) ) THEN 
+
+            WRITE(*,*) 'ERROR: problem with namelist FISSURAL_SOURCE_PARAMETERS'
+            WRITE(*,*) 'PLEASE CHECK VALUE OF X_FISSURES_END_POINTS',x_fissures_end_points
+            WRITE(*,*) 'For each fissure you want to use, define the x coordinates'
+            WRITE(*,*) 'of the two end points that determine each fissures.'
+            WRITE(*,*) 'The number of coordinates to define is'
+            WRITE(*,*) '2xN_FISSURES = ', 2*n_fissures
+            STOP
+
+        END IF 
+
+        IF ( ANY( ieee_is_nan(y_fissures_end_points) ) ) THEN 
+
+            WRITE(*,*) 'ERROR: problem with namelist FISSURAL_SOURCE_PARAMETERS'
+            WRITE(*,*) 'PLEASE CHECK VALUE OF Y_FISSURES_END_POINTS',y_fissures_end_points
+            WRITE(*,*) 'For each fissure you want to use, define the y coordinates'
+            WRITE(*,*) 'of the two end points that determine each fissures.'
+            WRITE(*,*) 'The number of coordinates to define is'
+            WRITE(*,*) '2xN_FISSURES = ', 2*n_fissures
+            STOP
+
+        END IF 
+
+        IF ( ANY( ieee_is_nan(width_fissures) ) ) THEN 
+
+            WRITE(*,*) 'ERROR: problem with namelist FISSURAL_SOURCE_PARAMETERS'
+            WRITE(*,*) 'PLEASE CHECK VALUE OF WIDTH_FISSURES',width_fissures
+            WRITE(*,*) 'The number of widths to define is ', n_fissures
+            STOP
+
+        END IF
+
+        IF ( ANY(width_fissures .LE. 0.0_wp )) THEN 
+
+            WRITE(*,*) 'ERROR: problem with namelist FISSURAL_SOURCE_PARAMETERS'
+            WRITE(*,*) 'PLEASE CHECK VALUE OF WIDTH_FISSURES',width_fissures
+            WRITE(*,*) 'For each fissure you want to use, define its width (>0).'
+            WRITE(*,*) 'The number of widths to define is ', n_fissures
+            STOP
+
+        END IF 
+
+        ! Controllo grossolano sulla dimensione delle fessure
+
+        DO i = 1, n_fissures
+
+          x1 = X_FISSURES_END_POINTS(2*i-1)
+          x2 = X_FISSURES_END_POINTS(2*i)
+          y1 = Y_FISSURES_END_POINTS(2*i-1)
+          y2 = Y_FISSURES_END_POINTS(2*i)
+          w  = WIDTH_FISSURES(i)
+      
+          x_min = min(x1,x2) - w/2.0
+          x_max = max(x1,x2) + w/2.0
+          y_min = min(y1,y2) - w/2.0
+          y_max = max(y1,y2) + w/2.0
+      
+          IF ( x_min < X0 + cell_size) THEN
+            WRITE(*,*) 'ERROR: problem with namelist FISSURAL_SOURCE_PARAMETERS'
+            WRITE(*,*) 'FISSURE ', i,  'TOO LARGE, OUT OF DOMAIN (X)'
+            WRITE(*,*) 'min(x) - width', x_min
+            STOP
+          END IF
+
+          IF ( x_max > X0 + (comp_cells_x-1)*cell_size) THEN
+            WRITE(*,*) 'ERROR: problem with namelist FISSURAL_SOURCE_PARAMETERS'
+            WRITE(*,*) 'FISSURE ', i,  'TOO LARGE, OUT OF DOMAIN (X)'
+            WRITE(*,*) 'max(x) + width', x_max
+            STOP
+          END IF
+          
+          IF ( y_min < Y0 + cell_size) THEN
+            WRITE(*,*) 'ERROR: problem with namelist FISSURAL_SOURCE_PARAMETERS'
+            WRITE(*,*) 'FISSURE ', i,  'TOO LARGE, OUT OF DOMAIN (Y)'
+            WRITE(*,*) 'min(y) - width', y_min
+            STOP
+          END IF
+
+          IF ( y_max > Y0 + (comp_cells_y-1)*cell_size) THEN
+            WRITE(*,*) 'ERROR: problem with namelist FISSURAL_SOURCE_PARAMETERS'
+            WRITE(*,*) 'FISSURE ', i,  'TOO LARGE, OUT OF DOMAIN (Y)'
+            WRITE(*,*) 'max(y) + width', y_max
+            STOP
+          END IF
+        
+        END DO
+
+        IF ( (linear_vel_fissures_flag .AND. volume_flow_rate_fissures_flag)  .OR. &
+            (.NOT.linear_vel_fissures_flag .AND. .NOT.volume_flow_rate_fissures_flag) &
+            ) THEN
+
+          WRITE(*,*) 'WARNING: problem with namelist FISSURAL_SOURCE_PARAMETERS'
+          WRITE(*,*) 'You defined both the linear velocity and the volume flow rate,'
+          WRITE(*,*) 'namely both LINEAR_VEL_FISSURE and VOLUME_FLOW_RATE_FISSURE.'
+          WRITE(*,*) 'Choose only one option.'
+          STOP
+
+        END IF
+
+        IF ( linear_vel_fissures_flag ) THEN
+
+          IF (ANY( ieee_is_nan(linear_vel_fissures) ) ) THEN
+
+            WRITE(*,*) 'ERROR: problem with namelist FISSURAL_SOURCE_PARAMETERS'
+            WRITE(*,*) 'PLEASE CHECK VALUE OF LINEAR_VEL_FISSURE (>=0)', linear_vel_fissures
+            WRITE(*,*) 'The number of velocities to define is ', n_fissures
+            STOP
+
+          END IF
+
+        END IF
+
+        IF ( volume_flow_rate_fissures_flag ) THEN
+          IF ( ANY( ieee_is_nan(volume_flow_rate_fissures) ) ) THEN
+
+            WRITE(*,*) 'ERROR: problem with namelist FISSURAL_SOURCE_PARAMETERS'
+            WRITE(*,*) 'PLEASE CHECK VALUE OF VOLUME_FLOW_RATE_FISSURE (>=0)', volume_flow_rate_fissures
+            WRITE(*,*) 'The number of velocities to define is ', n_fissures
+            STOP
+
+          END IF
+
+        END IF
+
+        IF ( ANY( ieee_is_nan(T_fissures) ) ) THEN 
+
+          WRITE(*,*) 'ERROR: problem with namelist FISSURAL_SOURCE_PARAMETERS'
+          WRITE(*,*) 'PLEASE CHECK VALUE OF T_FISSURES', T_fissures
+          WRITE(*,*) 'For each fissure you want to use, define its '
+          WRITE(*,*) 'Emission temperature.'
+          WRITE(*,*) 'The number of temperatures to define is ', n_fissures            
+          STOP
+
+        END IF
+
+        IF ( ANY( ieee_is_nan(time_param_fissures) ) ) THEN 
+
+          WRITE(*,*) 'ERROR: problem with namelist FISSURAL_SOURCE_PARAMETERS'
+          WRITE(*,*) 'PLEASE CHECK VALUE OF TIME_PARAM_FISSURES',time_param_fissures
+          WRITE(*,*) 'For each fissure you want to use, define the 4 parameters'
+          WRITE(*,*) 'of the temporal evolution of the discharge rate.'
+          WRITE(*,*) 'The number of values to define is'
+          WRITE(*,*) '4xN_FISSURES = ', 4*n_fissures
+          STOP
+
+        END IF
+
+        DO i = 1, n_fissures
+
+          t_p_f(1) = time_param_fissures(1 + 4*(i-1))
+          t_p_f(2) = time_param_fissures(2 + 4*(i-1))
+          t_p_f(3) = time_param_fissures(3 + 4*(i-1))
+          t_p_f(4) = time_param_fissures(4 + 4*(i-1))
+
+          IF ( ANY(t_p_f .LT. 0.0_wp ) ) THEN
+
+              WRITE(*,*)
+              WRITE(*,*) 'WARNING: problem with namelist FISSURAL_SOURCE_PARAMETERS'
+              WRITE(*,*) 'PLEASE CHECK VALUE OF TIME_PARAM_FISSURES OF FISSURE', i
+              WRITE(*,*) 'time_param_fissures =' , t_p_f
+              t_p_f(1) = t_end
+              t_p_f(2) = t_end
+              t_p_f(3) = 0.0_wp
+              t_p_f(4) = t_end
+              time_param_fissures(1+4*(i-1) : 4+4*(i-1)) = t_p_f
+              WRITE(*,*) 'CHANGED TO time_param =',t_p_f
+              WRITE(*,*) 'Source now constant in time' 
+              WRITE(*,*)
+
+          ELSE
+              
+              IF ( t_p_f(2) .GT. t_p_f(1) ) THEN
+                  
+                WRITE(*,*) 'ERROR: problem with namelist FISSURAL_SOURCE_PARAMETERS'
+                WRITE(*,*) 'PLEASE CHECK VALUE OF TIME_PARAM_FISSURES OF FISSURE', i
+                WRITE(*,*) 'time_param(1),time_param(2) =' , t_p_f(1:2)
+                WRITE(*,*) 'time_param(1) must be larger than time_param(2)'
+                STOP         
+                
+              END IF
+
+              IF ( t_p_f(3) .GT. ( 0.5_wp*t_p_f(2) ) ) THEN
+
+                WRITE(*,*) 'ERROR: problem with namelist FISSURAL_SOURCE_PARAMETERS'
+                WRITE(*,*) 'PLEASE CHECK VALUE OF TIME_PARAM_FISSURES OF FISSURE', i
+                WRITE(*,*) 'time_param(3) =', t_p_f(3)
+                WRITE(*,*) 'time_param(3) must be smaller than 0.5*time_param(2)'
+                STOP
+
+              END IF
+          
+
+           END IF
+
+         END DO
+  
+      END IF
+          
+   END IF
+
+
+  ! EB : end add
 
     
     ! ------- READ collapsing_volume_parameters NAMELIST ------------------------
@@ -1867,15 +2146,15 @@ CONTAINS
        
        IF ( .NOT. temperature_profile_flag ) THEN
 
-		   IF ( T_ground .EQ. -1.D0 ) THEN
+       IF ( T_ground .EQ. -1.D0 ) THEN
 
-			  WRITE(*,*) 'ERROR: problem with namelist TEMPERATURE_PARAMETERS'
-			  WRITE(*,*) 'T_GROUND value not properly set'
-			  WRITE(*,*) 'Please check the input file'
-			  STOP
+        WRITE(*,*) 'ERROR: problem with namelist TEMPERATURE_PARAMETERS'
+        WRITE(*,*) 'T_GROUND value not properly set'
+        WRITE(*,*) 'Please check the input file'
+        STOP
 			  
-		   END IF
-		          
+       END IF
+          
        END IF
        
        ! EB : end added 
@@ -2037,19 +2316,19 @@ CONTAINS
        
        IF ( .NOT. temperature_profile_flag ) THEN
 
-		   IF ( T_ground .LT. 0.D0) THEN
+          IF ( T_ground .LT. 0.D0) THEN
 
-			  WRITE(*,*) 'ERROR: problem with namelist TEMPERATURE_PARAMETERS'
-			  WRITE(*,*) 'T_GROUND value not properly set'
-			  WRITE(*,*) 'T_GROUND = ', T_ground
-			  WRITE(*,*) 'A value T_GROUND > 0 is required'
-              WRITE(*,*) 'T_GROUND must express in Kelvin'
-			  WRITE(*,*) 'Please check the input file'
-			  STOP
-			  
-		   END IF
-		   
-		   T_soil = T_ground
+            WRITE(*,*) 'ERROR: problem with namelist TEMPERATURE_PARAMETERS'
+            WRITE(*,*) 'T_GROUND value not properly set'
+            WRITE(*,*) 'T_GROUND = ', T_ground
+            WRITE(*,*) 'A value T_GROUND > 0 is required'
+            WRITE(*,*) 'T_GROUND must express in Kelvin'
+            WRITE(*,*) 'Please check the input file'
+            STOP
+            
+          END IF
+          
+          T_soil = T_ground
        
        END IF
        
@@ -2085,45 +2364,45 @@ CONTAINS
        
           IF ( thermal_conductivity_soil .EQ. 0.D0 ) THEN
 
-			 WRITE(*,*) 'ERROR: problem with namelist TEMPERATURE_PARAMETERS'
-			 WRITE(*,*) 'THERMAL_CONDUCTIVITY_SOIL value not properly set'
-			 WRITE(*,*) 'THERMAL_CONDUCTIVITY_SOIL = ', thermal_conductivity_soil
-			 WRITE(*,*) 'A value THERMAL_CONDUCTIVITY_SOIL > 0 is required'
-			 WRITE(*,*) 'Please check the input file'
-			 STOP
+          WRITE(*,*) 'ERROR: problem with namelist TEMPERATURE_PARAMETERS'
+          WRITE(*,*) 'THERMAL_CONDUCTIVITY_SOIL value not properly set'
+          WRITE(*,*) 'THERMAL_CONDUCTIVITY_SOIL = ', thermal_conductivity_soil
+          WRITE(*,*) 'A value THERMAL_CONDUCTIVITY_SOIL > 0 is required'
+          WRITE(*,*) 'Please check the input file'
+          STOP
 
-		  END IF
+          END IF
        
        END IF
        
        IF ( temperature_profile_flag ) THEN
 				
-	      c = ( thermal_conductivity_fluid / thermal_conductivity_soil )        &
-	          * emme * enne
+        c = ( thermal_conductivity_fluid / thermal_conductivity_soil )        &
+            * emme * enne
 	          
-		  effe = 1.0 / ( c + 1.0 )
+      effe = 1.0 / ( c + 1.0 )
 		  
-		  zeta = 1.0 / ( 1.0 - effe / ( 2.0 * enne ) )
+      zeta = 1.0 / ( 1.0 - effe / ( 2.0 * enne ) )
 		  
-		  eta = ( 1.0 - effe ) * zeta
+      eta = ( 1.0 - effe ) * zeta
 				
-		  IF ( velocity_profile_flag ) THEN
+      IF ( velocity_profile_flag ) THEN
 				   
-		     theta = ( 4.0 * enne - 1.0 ) / ( 8.0 * enne**3.0 )
+         theta = ( 4.0 * enne - 1.0 ) / ( 8.0 * enne**3.0 )
 				   
-			 beta_T = theta * eta + zeta - theta * zeta
+       beta_T = theta * eta + zeta - theta * zeta
 				   
-		  ELSE
+      ELSE
 				   
-			 beta_T = 1.0
+       beta_T = 1.0
 				   
-		  END IF
+      END IF
 				   
-	   ELSE 
+     ELSE 
 				
-	      beta_T = 1.0
+        beta_T = 1.0
 				
-	   END IF  
+     END IF  
        
        ! EB : end (added checks for the temperature profile parameters)
             
@@ -2496,17 +2775,31 @@ CONTAINS
 
     ELSE
 
-       WRITE(backup_unit,newrun_parameters)
+      WRITE(backup_unit,newrun_parameters)
 
-       IF ( ( radial_source_flag ) .OR. ( bottom_radial_source_flag ) ) THEN
-                   
-          WRITE(backup_unit,radial_source_parameters)
+      IF ( ( radial_source_flag ) .OR. ( bottom_radial_source_flag ) ) THEN
+
+        WRITE(backup_unit,radial_source_parameters)
+
+        ! EB : add
+
+        IF (bottom_fissural_source_flag ) THEN
+
+          WRITE(backup_unit,fissural_source_parameters)
+
+        END IF
+
+        ! EB : end add
+
+      ELSE IF (bottom_fissural_source_flag ) THEN
+
+        WRITE(backup_unit,fissural_source_parameters) ! EB : add
           
-       ELSE
+      ELSE
           
-          WRITE(backup_unit,initial_conditions)
+        WRITE(backup_unit,initial_conditions)
           
-       END IF
+      END IF
 
     END IF
 
@@ -2740,7 +3033,7 @@ CONTAINS
 
     INTEGER :: solid_idx
 
-    INTEGER :: i_vars , i_solid
+    INTEGER :: i_vars !, i_solid ! EB : commento perche` non usato
 
     INQUIRE (FILE=restart_file,exist=lexist)
 
@@ -3380,9 +3673,9 @@ CONTAINS
     INTEGER, INTENT(IN) :: output_idx
 
     CHARACTER(LEN=4) :: idx_string
-    CHARACTER(LEN=4) :: isolid_string
+    !CHARACTER(LEN=4) :: isolid_string ! EB : commento perche` non usato
     INTEGER :: j
-    INTEGER :: i_solid
+    !INTEGER :: i_solid ! EB : commento perche` non usato
     
     IF ( output_idx .EQ. 1 ) THEN
        
@@ -3497,98 +3790,98 @@ CONTAINS
     
     ! EB add : write on files T_surf and T_ground
        
-	IF ( temperature_profile_flag ) THEN
+  IF ( temperature_profile_flag ) THEN
 
-	   ! Computation of useful coefficients 'a' and 'c'
-	   a = 1.0 / ( 2.0 * enne )
-				
-	   c = thermal_conductivity_fluid * emme * enne / thermal_conductivity_soil 
-	   
-	   ! Compute T_surf and then write it on file
+     ! Computation of useful coefficients 'a' and 'c'
+     a = 1.0 / ( 2.0 * enne )
+
+     c = thermal_conductivity_fluid * emme * enne / thermal_conductivity_soil 
+
+     ! Compute T_surf and then write it on file
 							
-	   effe =  1.0 / ( 1.0 + c )    
+     effe =  1.0 / ( 1.0 + c )    
 	   
-	   zeta = 1.0 / ( 1.0 - a * effe )
+     zeta = 1.0 / ( 1.0 - a * effe )
 	   
-	   eta = ( 1.0 - effe ) * zeta
+     eta = ( 1.0 - effe ) * zeta
 
-	   output_esri_file = TRIM(run_name)//'_T_surf_'//idx_string//'.asc'
+     output_esri_file = TRIM(run_name)//'_T_surf_'//idx_string//'.asc'
 	   
-	   WRITE(*,*) 'WRITING ',output_esri_file
+     WRITE(*,*) 'WRITING ',output_esri_file
 	   
-	   OPEN(output_esri_unit,FILE=output_esri_file,status='unknown',form='formatted')
+     OPEN(output_esri_unit,FILE=output_esri_file,status='unknown',form='formatted')
 	   
-	   grid_output = -9999 
+     grid_output = -9999 
 	   
-	   WHERE ( qp(1,:,:) .GE. 1.0E-5_wp )
+     WHERE ( qp(1,:,:) .GE. 1.0E-5_wp )
 		  
-		  grid_output = zeta * qp(4,:,:) + ( 1 - zeta ) * T_soil 
+      grid_output = zeta * qp(4,:,:) + ( 1 - zeta ) * T_soil 
 		  
-	   END WHERE
+     END WHERE
 	   
 	   ! At the vent there is a costant profile, so T_surf = T_ground = T
 	   !WHERE ( source_xy(:,:) .GT. 0 )
-	   WHERE ( cell_source_fractions(:,:) .GT. 0 )
+     WHERE ( cell_source_fractions(:,:) .GT. 0 )
 			  
-		  grid_output = - qp(4,:,:)  
+      grid_output = - qp(4,:,:)  
 			  
-	   END WHERE
+     END WHERE
 
-	   WRITE(output_esri_unit,'(A,I5)') 'ncols ', comp_cells_x
-	   WRITE(output_esri_unit,'(A,I5)') 'nrows ', comp_cells_y
-	   WRITE(output_esri_unit,'(A,F15.3)') 'xllcorner ', x0
-	   WRITE(output_esri_unit,'(A,F15.3)') 'yllcorner ', y0
-	   WRITE(output_esri_unit,'(A,F15.3)') 'cellsize ', cell_size
-	   WRITE(output_esri_unit,'(A,I5)') 'NODATA_value ', -9999
+     WRITE(output_esri_unit,'(A,I5)') 'ncols ', comp_cells_x
+     WRITE(output_esri_unit,'(A,I5)') 'nrows ', comp_cells_y
+     WRITE(output_esri_unit,'(A,F15.3)') 'xllcorner ', x0
+     WRITE(output_esri_unit,'(A,F15.3)') 'yllcorner ', y0
+     WRITE(output_esri_unit,'(A,F15.3)') 'cellsize ', cell_size
+     WRITE(output_esri_unit,'(A,I5)') 'NODATA_value ', -9999
 	   
-	   DO j = comp_cells_y,1,-1
+     DO j = comp_cells_y,1,-1
 		  
-		  WRITE(output_esri_unit,*) grid_output(1:comp_cells_x,j)
+      WRITE(output_esri_unit,*) grid_output(1:comp_cells_x,j)
 		  
-	   ENDDO
+     ENDDO
 	   
-	   CLOSE(output_esri_unit)
+     CLOSE(output_esri_unit)
 	   
 	   ! Compute T_ground and then write it on file 
 			   
-	   output_esri_file = TRIM(run_name)//'_T_ground_'//idx_string//'.asc'
+     output_esri_file = TRIM(run_name)//'_T_ground_'//idx_string//'.asc'
 	   
-	   WRITE(*,*) 'WRITING ',output_esri_file
+     WRITE(*,*) 'WRITING ',output_esri_file
 	   
-	   OPEN(output_esri_unit,FILE=output_esri_file,status='unknown',form='formatted')
+     OPEN(output_esri_unit,FILE=output_esri_file,status='unknown',form='formatted')
 	   
-	   grid_output = -9999 
+     grid_output = -9999 
 	   
-	   WHERE ( qp(1,:,:) .GE. 1.0E-5_wp )
+     WHERE ( qp(1,:,:) .GE. 1.0E-5_wp )
 		  
-		  grid_output = eta * qp(4,:,:) + ( 1 - eta ) * T_soil 
+      grid_output = eta * qp(4,:,:) + ( 1 - eta ) * T_soil 
 		  
-	   END WHERE
+     END WHERE
 	   
 	   ! At the vent there is a costant profile, so T_surf = T_ground = T
 	   !WHERE ( source_xy(:,:) .GT. 0 )
-	   WHERE ( cell_source_fractions(:,:) .GT. 0 )
+     WHERE ( cell_source_fractions(:,:) .GT. 0 )
 			  
-		  grid_output = - qp(4,:,:) 
+      grid_output = - qp(4,:,:) 
 			  
-	   END WHERE
+     END WHERE
 
-	   WRITE(output_esri_unit,'(A,I5)') 'ncols ', comp_cells_x
-	   WRITE(output_esri_unit,'(A,I5)') 'nrows ', comp_cells_y
-	   WRITE(output_esri_unit,'(A,F15.3)') 'xllcorner ', x0
-	   WRITE(output_esri_unit,'(A,F15.3)') 'yllcorner ', y0
-	   WRITE(output_esri_unit,'(A,F15.3)') 'cellsize ', cell_size
-	   WRITE(output_esri_unit,'(A,I5)') 'NODATA_value ', -9999
+     WRITE(output_esri_unit,'(A,I5)') 'ncols ', comp_cells_x
+     WRITE(output_esri_unit,'(A,I5)') 'nrows ', comp_cells_y
+     WRITE(output_esri_unit,'(A,F15.3)') 'xllcorner ', x0
+     WRITE(output_esri_unit,'(A,F15.3)') 'yllcorner ', y0
+     WRITE(output_esri_unit,'(A,F15.3)') 'cellsize ', cell_size
+     WRITE(output_esri_unit,'(A,I5)') 'NODATA_value ', -9999
 	   
-	   DO j = comp_cells_y,1,-1
+     DO j = comp_cells_y,1,-1
 		  
-		  WRITE(output_esri_unit,*) grid_output(1:comp_cells_x,j)
+      WRITE(output_esri_unit,*) grid_output(1:comp_cells_x,j)
 		  
-	   ENDDO
+     ENDDO
 	   
-	   CLOSE(output_esri_unit) 
+     CLOSE(output_esri_unit) 
 	   
-	END IF  
+  END IF  
 	! EB : end write on files T_surf and T_ground
  
     RETURN
@@ -3936,6 +4229,33 @@ CONTAINS
     t_runout = time + dt_runout
 
   END SUBROUTINE output_runout
+
+  ! EB : add
+
+  !------------------------------------------------------------------------------
+  !> \brief Input variable check
+  !> @author
+  !> Mattia de' Michieli Vitturi
+  !
+  !> This function checks is the input variable "var" value has been set or if it
+  !> has the initialization value (NaN).
+  !> \date 18/05/2019, 02/02/2026
+  !> \param[in]   var      variable to check
+  !> \return      a logical which is True if variable has been defined
+  !------------------------------------------------------------------------------
+
+  LOGICAL FUNCTION isSet(var)
+
+    IMPLICIT NONE
+
+    REAL*8 :: var
+
+    isSet = .NOT.ieee_is_nan(var)
+
+    RETURN
+
+  END FUNCTION isSet
+
 
 END MODULE inpout_2d
 

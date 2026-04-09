@@ -179,6 +179,9 @@ INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LDFLAGS = @LDFLAGS@
 LIBOBJS = @LIBOBJS@
+# Use these flags to DEBUG
+#FCFLAGS = -fopenmp -g -O0 -fcheck=all -fbacktrace -Wall -Wextra
+#FCFLAGS = -fopenmp -g -O0 -fcheck=all -fbacktrace -ffpe-trap=invalid,zero,overflow
 LIBS = -lm -llapack
 LTLIBOBJS = @LTLIBOBJS@
 MAKEINFO = @MAKEINFO@

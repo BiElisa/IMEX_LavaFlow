@@ -23,6 +23,9 @@ IMEX_LavaFlow_SOURCES = \
 
 FCFLAGS         = -fopenmp -Ofast -funroll-all-loops
 FCDEBUGFLAGS    = -Wall -g
+# Use these flags to DEBUG
+#FCFLAGS = -fopenmp -g -O0 -fcheck=all -fbacktrace -Wall -Wextra
+#FCFLAGS = -fopenmp -g -O0 -fcheck=all -fbacktrace -ffpe-trap=invalid,zero,overflow
 
 LIBS            = -lm -llapack
 

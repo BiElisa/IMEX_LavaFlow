@@ -120,7 +120,24 @@ MODULE parameters_2d
   REAL(wp) :: vel_source
   REAL(wp) :: T_source
   REAL(wp) :: time_param(4)
+
+  ! EB : add
+
+  LOGICAL :: bottom_fissural_source_flag
+
+  INTEGER :: n_fissures
+  LOGICAL :: linear_vel_fissures_flag
+  LOGICAL :: volume_flow_rate_fissures_flag
   
+  REAL(wp), ALLOCATABLE :: x_fissures_end_points(:)
+  REAL(wp), ALLOCATABLE :: y_fissures_end_points(:)
+  REAL(wp), ALLOCATABLE :: width_fissures(:)
+  REAL(wp), ALLOCATABLE :: linear_vel_fissures(:)
+  REAL(wp), ALLOCATABLE :: volume_flow_rate_fissures(:)
+  REAL(wp), ALLOCATABLE :: T_fissures(:)
+  REAL(wp), ALLOCATABLE :: time_param_fissures(:)
+
+  ! EB : end add
 
   LOGICAL :: collapsing_volume_flag
 

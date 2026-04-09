@@ -66,11 +66,23 @@ The executable `IMEX_LavaFlow` is copied in the `bin` folder.
 Examples are located in the EXAMPLES folder.
 
 ## Run an example
-To run an example you need to have in the same folder an input file `IMEX_LavaFlow.inp`, an asc file for the topography (for example `topography_dem.asc` contained into the folder `EXAMPLE_DEM_FOR_STUDENTS`), and a copy or link of the executable file contained into the `bin` folder.
+Two examples are present in the `EXAMPLE` folder:
+
+* `EXAMPLE_DEM_FISSURAL_VENT` contains a DEM file and an input file to simulate a lava flow coming from a fissural (rectangular) vent.
+
+* `EXAMPLE_DEM_RADIAL_VENT` contains a DEM file and an input file to simulate a lava flow coming from a radial (circular) vent.
+
+Notice that to run a simulation you need to have in the same folder an input file `IMEX_LavaFlow.inp`, an asc file for the topography (for example `topography_dem.asc` contained into the folder `EXAMPLE_DEM_RADIAL_VENT`), and a copy or link of the executable file contained into the `bin` folder.
+
 Execute the simulation by launching:
 ```bash
 $ ./IMEX_LavaFlow
 ```
+To visualize the output with ParaView, copy into the folder with the output of your simulation the file `p2d_to_netCDF4.py` inside the folder `UTILS`. Create the file readable from ParaView by running the file with python and add the name of the bak-file of your run, for example `Example_40m.bak`:
+```bash
+$ python p2d_to_netCDF4.py Example_40m.bak
+```
+A new nc-file is generated, for example `Example_40m.nc`, which can be opened by ParaView with the NetCDF Reader.
 
 ## Read and modify an input file
 
@@ -104,7 +116,10 @@ The file is composed of blocks, Fortran NAMELISTS, each introduced by `&BLOCK_NA
 | `ENERGY_FLAG` | Activate the energy equation (set `F` for lava flows). |
 | `LIQUID_FLAG` | `T` lava is considered a liquid |
 | `RADIAL_SOURCE_FLAG` | Activate radial sources from the surface (set `F` for lava flows). |
-| `BOTTOM_RADIAL_SOURCE_FLAG` | Activate radial sources from the bottom (set `T` for lava flows). |
+| `BOTTOM_RADIAL_SOURCE_FLAG` | Activate radial sources from the bottom (set `T` for lava flows if you have a radial vent). |
+| `BOTTOM_FISSURAL_SOURCE_FLAG` | Activate fissural sources from the bottom (set `T` for lava flows if you have a fissural vent). |
+| `LINEAR_VEL_FISSURES_FLAG` | If selected, use the linear velocity for the discharge rate from the fissures (volume flow rate / fissure area). |
+| `VOLUME_FLOW_RATE_FISSURES_FLAG` | If selected, use the volume flow rate for the discharge rate from the fissures [not implemented yet]. |
 | `COLLAPSING_VOLUME_FLAG` | Activate initial volume collapse (set `F` for lava flows).|
 | `VELOCITY_PROFILE_FLAG`, `TEMPERATURE_PROFILE_FLAG` | Activate velocity and temperature vertical profiles. |
 
@@ -241,7 +256,17 @@ This profile exhibits a gradual ramp-up to full strength, followed by a reset to
    src="https://github.com/user-attachments/assets/debab8f9-43d0-4e88-862d-7059968c9241" 
 />
 
+### FISSURAL_SOURCE_PARAMETERS
+Use these parameters to create a fissural vent. The fissure is defined as a rectangle defined by its two end pointds and its width. For example, the extremes P1(x1, y1), P2(x2, y2) and the width W. 
 
+| Variable  |  Meaning  |
+|-----------|-----------|
+| `X_FISSURES_END_POINTS` | x-coordinates (m) of the end points, e.g. x1, x2. |
+| `Y_FISSURES_END_POINTS` | y-coordinates (m) of the end points, e.g. y1, y2. |
+| `WIDTH_FISSURES` | Width of the fissural source (m). |
+| `LINEAR_VEL_FISSURES` | Injection velocity from the source (ms⁻¹). It is  the ratio between the effusion rate (which is a volume flow rate) (m³s⁻¹) and the source area (m²)|
+| `T_FISSURES` | Temperature of the emitted material (K). |
+| `TIME_PARAM_FISSURES` | Source time parameters (see `TIME_PARAM` of the `RADIAL_SOURCE_PARAM` for more details). |
 
 ### GAS_TRANSPORT_PARAMETERS 
 No need to touch these parameters for lava flow simulations.

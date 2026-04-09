@@ -273,7 +273,7 @@ PROGRAM IMEX_LavaFlow
 
      CALL update_param
 
-     IF ( t.EQ. t_start ) THEN
+     IF ( t .EQ. t_start ) THEN
 
         CALL check_solve(.TRUE.)
 

@@ -98,6 +98,10 @@ MODULE geometry_2d
   REAL(wp), ALLOCATABLE :: sourceN_vect_y(:,:)
 
   REAL(wp), ALLOCATABLE :: cell_source_fractions(:,:)
+  REAL(wp), ALLOCATABLE :: cell_source_fractions_stag_x(:,:)     !
+  REAL(wp), ALLOCATABLE :: cell_source_fractions_stag_y(:,:)     !
+  REAL(wp), ALLOCATABLE :: cell_radial_source_fractions(:,:)     ! EB : add
+  REAL(wp), ALLOCATABLE :: cell_fissural_source_fractions(:,:) !
   
   REAL(wp) :: pi_g
 
@@ -136,6 +140,9 @@ CONTAINS
     USE parameters_2d, ONLY: eps_sing , eps_sing4
     USE parameters_2d, ONLY : bottom_radial_source_flag
     USE parameters_2d, ONLY : x_source , y_source , r_source
+    USE parameters_2d, ONLY : bottom_fissural_source_flag                       ! EB : add
+    USE parameters_2d, ONLY : n_fissures , x_fissures_end_points,          &    !
+       y_fissures_end_points , width_fissures                                   !
 
     IMPLICIT none
 
@@ -196,6 +203,10 @@ CONTAINS
     ALLOCATE( grav_coeff_stag_y(comp_cells_x,comp_interfaces_y) )
 
     ALLOCATE( cell_source_fractions(comp_cells_x,comp_cells_y) )
+    ALLOCATE( cell_source_fractions_stag_x(comp_interfaces_x,comp_cells_y) )     !
+    ALLOCATE( cell_source_fractions_stag_y(comp_cells_x,comp_interfaces_y) )     !
+    ALLOCATE( cell_radial_source_fractions(comp_cells_x,comp_cells_y) )          ! EB : add
+    ALLOCATE( cell_fissural_source_fractions(comp_cells_x,comp_cells_y) )        !
   
     IF ( comp_cells_x .GT. 1 ) THEN
 
@@ -295,14 +306,52 @@ CONTAINS
     ! cell centers and 
     CALL topography_reconstruction
 
-    
     pi_g = 4.0_wp * ATAN(1.0_wp)
+
+   ! EB : add e modifica
+
+    cell_radial_source_fractions    = 0.0_wp
+    cell_fissural_source_fractions  = 0.0_wp
+    cell_source_fractions           = 0.0_wp
+    cell_source_fractions_stag_x    = 0.0_wp
+    cell_source_fractions_stag_y    = 0.0_wp
 
     IF ( bottom_radial_source_flag ) THEN
 
-       CALL compute_cell_fract(x_source,y_source,r_source,cell_source_fractions)
+       CALL compute_cell_fract(x_source,y_source,r_source,                      & 
+            cell_radial_source_fractions)  ! EB : modificato da 'cell_source_fractions'
 
     END IF
+
+    IF ( bottom_fissural_source_flag ) THEN
+
+      CALL compute_cell_fract_fissures(n_fissures , x_fissures_end_points,      &
+      y_fissures_end_points , width_fissures, cell_fissural_source_fractions)
+
+    END IF
+
+    cell_source_fractions = MIN( 1.0_wp,                                &
+        cell_radial_source_fractions + cell_fissural_source_fractions )
+
+    DO k = 1, comp_cells_y
+      DO j = 1, comp_interfaces_x 
+
+        cell_source_fractions_stag_x(j,k) = 0.5_wp * (cell_source_fractions(MAX(1,j-1),k) &
+          + cell_source_fractions(MIN(j, comp_cells_x),k))
+
+      END DO
+    END DO
+
+    DO j = 1, comp_cells_x
+      DO k = 1, comp_interfaces_y
+
+        cell_source_fractions_stag_y(j,k) = 0.5_wp * (cell_source_fractions(j,MAX(1,k-1)) &
+          + cell_source_fractions(j,MIN(k, comp_cells_y)))
+
+      END DO
+    END DO
+
+    ! EB : end add
 
     RETURN
 
@@ -509,7 +558,7 @@ CONTAINS
   !> \brief Radial source initialization
   !
   !> In this subroutine the source of mass is initialized. The cells belonging
-  !> to the source are are identified ( source_cell(j,k) = 2 ). [EB : levare un "are"]
+  !> to the source are identified ( source_cell(j,k) = 2 ).
   !> @author 
   !> Mattia de' Michieli Vitturi
   !> \date 2021/04/30
@@ -532,7 +581,7 @@ CONTAINS
 
     END IF
     
-    ! cell where are equations are solved [EB : where THE eq...]
+    ! cell where the equations are solved 
     source_cell(1:comp_cells_x,1:comp_cells_y) = 0
 
     sourceE(1:comp_cells_x,1:comp_cells_y) = .FALSE.
@@ -1180,14 +1229,14 @@ CONTAINS
     REAL(wp), INTENT(IN) :: b
     REAL(wp) :: sa , sb 
 
-    IF ( MIN(ABS(a),ABS(b)) .LT. -1.0e-40_wp ) THEN
+    IF ( MIN(ABS(a),ABS(b)) .LT. -1.0e-30_wp ) THEN
 
        minmod = 0.0_wp
 
     ELSE
 
-       sa = a / ABS(a)
-       sb = b / ABS(b)
+       sa = SIGN(1.0_wp, a) ! a / ABS(a) ! EB : modificato per stabilita` numerica
+       sb = SIGN(1.0_wp, b) ! b / ABS(b) !
        
        minmod = 0.5_wp * ( sa+sb ) * MIN( ABS(a) , ABS(b) )
 
@@ -1207,8 +1256,8 @@ CONTAINS
 
     ELSE
 
-       sa = a / ABS(a)
-       sb = b / ABS(b)
+      sa = SIGN(1.0_wp, a) ! a / ABS(a) ! EB : modificato per stabilita` numerica
+      sb = SIGN(1.0_wp, b) ! b / ABS(b) !
 
        maxmod = 0.5_wp * ( sa+sb ) * MAX( ABS(a) , ABS(b) )
 
@@ -1303,6 +1352,182 @@ CONTAINS
     RETURN
 
   END SUBROUTINE compute_cell_fract
+
+  ! EB : add
+
+  !******************************************************************************
+  !> \brief Compute the cell fraction occupied by fissural sources
+  !>
+  !> This subroutine computes the fraction of each computational cell occupied
+  !> by one or more fissural vents.
+  !>
+  !> Each fissure is modeled as a rectangular strip defined by:
+  !>  - two endpoints P1 and P2 (centerline of the fissure)
+  !>  - a width w
+  !>
+  !> A point P belongs to a fissure if:
+  !>  (1) its orthogonal projection onto segment P1-P2 lies within the segment
+  !>  (2) its distance from the segment is less than w/2
+  !>
+  !> The cell fraction is computed using a subgrid sampling approach:
+  !> each computational cell is subdivided into a fine grid, and the fraction
+  !> of points inside any fissure is evaluated.
+  !>
+  !> The method also computes, for each fissure, an approximate total area
+  !> and compares it with the exact analytical area:
+  !>
+  !>     A_exact = w * |P2 - P1|
+  !>
+  !> \param[in]   n_fiss              number of fissures
+  !> \param[in]   x_fiss_end_points   x-coordinates of endpoints (size 2*n_fiss)
+  !> \param[in]   y_fiss_end_points   y-coordinates of endpoints (size 2*n_fiss)
+  !> \param[in]   width_fiss          fissure widths
+  !> \param[out]  cell_fract          cell occupation fraction
+  !
+  !> @author 
+  !> Elisa Biagioli
+  !> \date 2026/04/07
+  !******************************************************************************
+
+  SUBROUTINE compute_cell_fract_fissures(n_fiss , x_fiss_end_points,      &
+      y_fiss_end_points , width_fiss, cell_fract)
+
+    IMPLICIT NONE
+
+    INTEGER, INTENT(IN) :: n_fiss
+
+    REAL(wp), INTENT(IN) :: x_fiss_end_points(2*n_fiss)
+    REAL(wp), INTENT(IN) :: y_fiss_end_points(2*n_fiss)
+    REAL(wp), INTENT(IN) :: width_fiss(n_fiss)
+
+    REAL(wp), INTENT(OUT) :: cell_fract(comp_cells_x,comp_cells_y)
+
+    REAL(wp), ALLOCATABLE :: x_subgrid(:) , y_subgrid(:)
+    INTEGER, ALLOCATABLE :: check_subgrid(:)
+
+    INTEGER :: n_points , n_points2   
+    INTEGER :: i, j, k, l
+
+    REAL(wp) :: x1,y1,x2,y2,w
+    REAL(wp) :: dist
+    REAL(wp) :: x_loc, y_loc
+    REAL(wp) :: appoggio(n_fiss)
+    REAL(wp) :: dx_seg, dy_seg, L2, t, length, area_exact, area_approx
+
+    n_points = 200
+    n_points2 = n_points**2
+
+    ALLOCATE( x_subgrid(n_points2) )
+    ALLOCATE( y_subgrid(n_points2) )
+    ALLOCATE( check_subgrid(n_points2) )
+
+    x_subgrid = 0.0_wp
+    y_subgrid = 0.0_wp
+
+    ! ---------------- SUBGRID ----------------
+
+    DO l = 1,n_points
+
+      x_subgrid(l:n_points2:n_points) = DBLE(l)
+      y_subgrid((l-1)*n_points+1:l*n_points) = DBLE(l)
+
+    END DO
+
+    x_subgrid = ( 2.0_wp * x_subgrid - 1.0_wp ) / ( 2.0_wp * DBLE(n_points) )
+    y_subgrid = ( 2.0_wp * y_subgrid - 1.0_wp ) / ( 2.0_wp * DBLE(n_points) )
+   
+    x_subgrid = ( x_subgrid - 0.5_wp ) * dx
+    y_subgrid = ( y_subgrid - 0.5_wp ) * dy
+
+    cell_fract = 0.0_wp
+    appoggio = 0.0_wp
+
+    ! ---------------- LOOP CELLS ----------------
+
+    DO j=1,comp_cells_x
+
+      DO k=1,comp_cells_y
+
+        check_subgrid = 0
+
+        ! ---- loop fissures
+        DO i=1,n_fiss
+
+          x1 = x_fiss_end_points(2*i-1)
+          x2 = x_fiss_end_points(2*i)
+          y1 = y_fiss_end_points(2*i-1)
+          y2 = y_fiss_end_points(2*i)
+          w  = width_fiss(i)
+
+          dx_seg = x2 - x1
+          dy_seg = y2 - y1
+          L2     = dx_seg * dx_seg + dy_seg * dy_seg
+
+          ! ---- loop subgrid
+          DO l = 1,n_points2
+
+            x_loc = x_comp(j) + x_subgrid(l)
+            y_loc = y_comp(k) + y_subgrid(l)
+
+            ! projection factor of (x_loc,y_loc) over the line defined by P1-P2
+            t = ( (x_loc - x1)*dx_seg + (y_loc - y1)*dy_seg ) / L2
+
+            ! check if the projection falls into the segment P1-P2
+            IF ( (t >= 0.0_wp) .AND. (t <= 1.0_wp) ) THEN
+
+              ! check if the distance between the point (x_loc,y_loc)
+              ! and the segment P1-P2 is less than w/2
+              dist = ABS( (x_loc-x1)*dy_seg - (y_loc-y1)*dx_seg ) / SQRT(L2)
+
+              IF ( dist <= 0.5_wp*w ) THEN
+
+                check_subgrid(l) = 1
+                appoggio(i) = appoggio(i) +1
+
+              END IF
+
+            END IF
+
+          END DO
+
+        END DO
+
+        ! ---- accumulo (IMPORTANTE: +=)
+        cell_fract(j,k) = cell_fract(j,k) + REAL(SUM(check_subgrid))/n_points2
+
+      END DO
+
+    ENDDO
+
+    ! Scriviamo commento errore fra area esatta ed area approssimata
+    DO  i=1,n_fiss
+
+      x1 = x_fiss_end_points(2*i-1)
+      x2 = x_fiss_end_points(2*i)
+      y1 = y_fiss_end_points(2*i-1)
+      y2 = y_fiss_end_points(2*i)
+
+      length = SQRT((x2-x1)**2 + (y2-y1)**2)
+
+      area_exact  = width_fiss(i) * length
+      area_approx = dx * dy * appoggio(i) / REAL(n_points2,wp)
+
+      WRITE(*,*) 'Fissure ', i
+      WRITE(*,*) ' Exact area = ', area_exact
+      WRITE(*,*) ' Approx area = ', area_approx
+      WRITE(*,*) ' Rel error = ', ABS(1.0_wp - area_approx/area_exact)
+
+    END DO
+
+    DEALLOCATE(x_subgrid)
+    DEALLOCATE(y_subgrid)
+    DEALLOCATE(check_subgrid)
+
+    RETURN
+
+  END SUBROUTINE compute_cell_fract_fissures
+
+  ! EB : end add
 
 
 END MODULE geometry_2d
